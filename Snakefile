@@ -2,9 +2,6 @@
 
 
 
-# This workflow is designed to download fastq files from SRA database. 
-# It's possible to perform manually as well (see https://github.com/Mira0507/using_SRA)
-
 #################################### Defined by users #################################
 configfile:"config/config.yaml"    # Sets path to the config file
 
@@ -58,7 +55,7 @@ rule align_star:
                     "--genomeDir {params.indexing} " 
                     "--sjdbGTFfile ../{input.gtf} "  
                     "--sjdbOverhang 100 "  
-                    "--readFilesIn {r} "  
+                    "--readFilesIn ../{r} "  
                     "--outFileNamePrefix {p} "
                     "--outFilterType BySJout "  
                     "--outFilterMultimapNmax 20 "
@@ -73,6 +70,6 @@ rule align_star:
                     "SortedByCoordinate "
                     "--quantMode GeneCounts "
                     "--twopassMode Basic "
-                    "--chimOutType Junctions >> star.log && cd ..")
+                    "--chimOutType Junctions >> star1.log && cd ..")
 
 
