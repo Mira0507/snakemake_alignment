@@ -6,15 +6,20 @@ INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisa
 
 INDEX_HISAT: "reference/hisat2_index" # Assigns path to hisat2 indexing directory
 
-THREADS: 8     # Assigns the number of threads
+THREADS: "8"     # Assigns the number of threads
 
 STAR_OUT: "star_output"  # Assigns STAR output directory
 
-HISAT2_OUT: "hisat2_output"
+HISAT2_OUT: "hisat2_output"  # Assigns HISAT2 output directory
 
 INPUT_PATH: # Assigns input fastq.gz file path (either absolute or relative paths)
-  - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/A_1.fastq.gz'
-  - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/B_1.fastq.gz'
+  - 'fastq/A_1.fastq.gz'
+  - 'fastq/B_1.fastq.gz'
+  
+# - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/A_1.fastq.gz'
+# - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/B_1.fastq.gz'
+
+
 
 
 FILE_NAME:   # Assigns file names needed as prefix
