@@ -4,7 +4,7 @@ INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisa
 
 INDEX_HISAT: "reference/hisat2_index" # Assigns path to hisat2 indexing directory
 
-THREADS: "8"     # Assigns the number of threads
+THREADS: 8     # Assigns the number of threads
 
 STAR_OUT: "star_output"  # Assigns STAR output directory
 
