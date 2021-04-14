@@ -2,11 +2,8 @@
 
 
 
-# This workflow is designed to download fastq files from SRA database. 
-# It's possible to perform manually as well (see https://github.com/Mira0507/using_SRA)
-
 #################################### Defined by users #################################
-configfile:"config/config.yaml"    # Sets path to the config file
+configfile:"config/config_single.yaml"    # Sets path to the config file
 
 #######################################################################################
 
@@ -15,11 +12,10 @@ THREADS=config["THREADS"]
 shell.prefix('set -euo pipefail')
 shell.executable('/bin/bash')
 
-
 rule all:
     input:
         expand("star_output/{sample}Aligned.sortedByCord.out.bam", 
-               sample=config["FILE_NAME"])
+               sample=config["INPUT_PREFIX"])
 
 
 
@@ -39,17 +35,22 @@ rule align_star:
     """
     input:
         gtf=config["GTF"],
-        reads=config["INPUT_PATH"],
         tempfile="temp.txt"
     output:
         "star_output/{sample}Aligned.sortedByCord.out.bam"   
     params:
         indexing=config["INDEX_STAR"],
-        files=config["FILE_NAME"]
+        indir=config['INPUT_DIR'],
+        files=config["INPUT_PREFIX"], 
+        read_ends=config['INPUT_END'],
+        ext=config['INPUT_EXT']
     run:
-        for i in range(len(input.reads)):
-            r=input.reads[i]
+        for i in range(len(params.files)):
             p=params.files[i]
+            r1="../" + params.indir + params.files[i] + "_1" + params.ext + " " 
+            r2=""
+            if len(params.read_ends) == 2: 
+                r2="../"+ params.indir + params.files[i] + "_2" + params.ext + " " 
             shell("set +o pipefail; "
                   "cd star_output && " 
                   "STAR --runThreadN {THREADS} "  
@@ -58,7 +59,7 @@ rule align_star:
                     "--genomeDir {params.indexing} " 
                     "--sjdbGTFfile ../{input.gtf} "  
                     "--sjdbOverhang 100 "  
-                    "--readFilesIn {r} "  
+                    "--readFilesIn {r1}{r2}"  
                     "--outFileNamePrefix {p} "
                     "--outFilterType BySJout "  
                     "--outFilterMultimapNmax 20 "
@@ -74,5 +75,4 @@ rule align_star:
                     "--quantMode GeneCounts "
                     "--twopassMode Basic "
                     "--chimOutType Junctions >> star.log && cd ..")
-
-
+        
