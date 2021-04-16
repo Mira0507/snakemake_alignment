@@ -10,7 +10,7 @@ STAR_OUT: "star_output"  # Assigns STAR output directory
 
 HISAT2_OUT: "hisat2_output"  # Assigns HISAT2 output directory
 
-INPUT_DIR: 'fastq_pe/'
+INPUT_DIR: 'fastq_pe/'   # Contains input fastq.gz files
 
 INPUT_PREFIX:
   - 'vector'
