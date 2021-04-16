@@ -1,12 +1,12 @@
 
 #################################### Defined by users #################################
-configfile:"config/config_single.yaml"    # Sets path to the config file
+configfile:"config/config_paired.yaml"    # Sets path to the config file
 
 #######################################################################################
 
 THREADS=config["THREADS"]
 
-shell.prefix('set -euo pipefail')
+shell.prefix('set -euo pipefail; ')
 shell.executable('/bin/bash')
 
 rule all:
