@@ -22,8 +22,6 @@ INPUT_END:
 
 INPUT_EXT: '.fastq.gz'
   
-# - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/A_1.fastq.gz'
-# - '/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/fastq/B_1.fastq.gz'
 
 
 
