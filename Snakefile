@@ -11,7 +11,7 @@ shell.executable('/bin/bash')
 
 rule all:
     input:
-        expand("star_output/{sample}Aligned.sortedByCord.out.bam", 
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", 
                sample=config["INPUT_PREFIX"])
 
 
@@ -23,7 +23,7 @@ rule align_star:
     input:
         gtf=config["GTF"]
     output:
-        expand("star_output/{sample}Aligned.sortedByCord.out.bam", sample=config['INPUT_PREFIX'])  
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['INPUT_PREFIX'])  
     params:
         indexing=config["INDEX_STAR"],
         indir=config['INPUT_DIR'],
