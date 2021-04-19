@@ -152,6 +152,7 @@ dependencies:
   - smmap=3.0.5=pyh44b312d_0
   - snakemake-minimal=6.1.1=pyhdfd78af_0
   - sqlite=3.34.0=h74cdb3f_0
+  - sra-tools=2.8.0=0
   - star=2.7.6a=0
   - tbb=2021.1.1=h4bd325d_0
   - tk=8.6.10=h21135ba_1
@@ -182,4 +183,4 @@ dependencies:
   - zipp=3.4.1=pyhd8ed1ab_0
   - zlib=1.2.11=h516909a_1010
   - zstd=1.4.9=ha95c52a_0
-prefix: /home/mira/miniconda3/envs/mapping
+prefix: /home/mira/miniconda3/envs/snakemake_mapping
