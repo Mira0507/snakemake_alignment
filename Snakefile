@@ -11,11 +11,11 @@ THREADS=config['THREADS']
 
 rule all: 
     input: 
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", 
-               sample=config["FASTQ_PREFIX"])
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config["FASTQ_PREFIX"]),
+        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX'])
 
 
-rule get_fastq:
+rule get_fastq:   # Creates fastq.gz files in fastq directory
     """
     This rule downloads SRA and converts to FASTQ files
     """
@@ -32,7 +32,7 @@ rule get_fastq:
                   shell("mv {key}_{read}.fastq.gz fastq/{value}_{read}.fastq.gz") 
 
 
-rule align_star: 
+rule align_star:   # Creates bam files in star_output directory"
     """
     This rule aligns the reads using STAR two-pass mode
     """
@@ -75,5 +75,38 @@ rule align_star:
                     "SortedByCoordinate "
                     "--quantMode GeneCounts "
                     "--twopassMode Basic "
-                    "--chimOutType Junctions")
-        
+                    "--chimOutType Junctions")     
+
+
+rule align_hisat2:    # Creates bam files in hisat2_output directory"
+    """
+    This rule aligns the reads using HISAT2    
+    """
+    input:
+        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])
+    output:
+        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),
+        temp(expand("hisat2_output/{sample}.sam", sample=config['FASTQ_PREFIX']))
+    params:
+        indir=config['FASTQ_DIR'],
+        files=config["FASTQ_PREFIX"], 
+        read_ends=config['END'],
+        ext=config['FASTQ_EXT'],
+        indexing=config['INDEX_HISAT']
+    run:
+        for i in range(len(params.files)):
+            p=params.files[i]
+            r1= params.indir + params.files[i] + "_1" + params.ext 
+            r2=""
+            read="-U " + r1
+            if len(params.read_ends) == 2: 
+                r2= params.indir + params.files[i] + "_2" + params.ext  
+                read="-1 " + r1 + " -2 " + r2
+            shell("hisat2 -q -p {THREADS} "
+                  "--seed 23 "
+                  "-x {params.indexing} "
+                  "{read} "
+                  "-S hisat2_output/{p}.sam && "
+                  "samtools view -bS "
+                  "-@ {THREADS} "
+                  "hisat2_output/{p}.sam > hisat2_output/{p}.bam")
