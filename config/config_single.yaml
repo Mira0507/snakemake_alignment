@@ -1,8 +1,32 @@
+
+
+SAMPLE:
+  SRR13508744: Ctrl
+  SRR13508749: Treatment
+
+
+
+
+FASTQ_LIST:
+  - Ctrl_1
+  - Treatment_1
+
+END: 
+  - 1
+
+
+SRA:
+  - SRR13508744
+  - SRR13508749
+
+
+
 GTF: "reference/gencode.v36.primary_assembly.annotation.gtf" # Assigns path to .gtf file
 
 INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
 
-INDEX_HISAT: "reference/hisat2_index" # Assigns path to hisat2 indexing directory
+INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files (e.g.reference/hisat2_index/hisat2_index.1.ht2, reference/hisat2_index/hisat2_index.2.ht2, ...)
+
 
 THREADS: 8     # Assigns the number of threads
 
@@ -10,17 +34,15 @@ STAR_OUT: "star_output"  # Assigns STAR output directory
 
 HISAT2_OUT: "hisat2_output"  # Assigns HISAT2 output directory
 
-INPUT_DIR: 'fastq_se/'
+FASTQ_DIR: 'fastq/'
 
-INPUT_PREFIX:
-  - 'Control'
+FASTQ_PREFIX:
+  - 'Ctrl'
   - 'Treatment'
 
-INPUT_END:
-  - '_1'
-# - '_2' # for paired end reads
 
-INPUT_EXT: '.fastq.gz'
+
+FASTQ_EXT: '.fastq.gz'
   
 
 
