@@ -11,8 +11,8 @@ THREADS=config['THREADS']
 
 rule all: 
     input: 
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config["FASTQ_PREFIX"]),
-        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX'])
+        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),
+        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX'])
 
 
 rule get_fastq:   # Creates fastq.gz files in fastq directory
@@ -104,9 +104,46 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
                 read="-1 " + r1 + " -2 " + r2
             shell("hisat2 -q -p {THREADS} "
                   "--seed 23 "
+                  "--summary-file hisat2_output/summary_{p}.txt "
                   "-x {params.indexing} "
                   "{read} "
                   "-S hisat2_output/{p}.sam && "
                   "samtools view -bS "
                   "-@ {THREADS} "
                   "hisat2_output/{p}.sam > hisat2_output/{p}.bam")
+
+rule featurecounts:
+    """
+    This rule assesses read counts using featureCounts
+    """
+    input:
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX']), 
+        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX'])
+    params:
+        ends=config['END'],
+        gtf=config['GTF']
+    output:
+        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),
+        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX'])
+    run:
+        end=""
+        if len(params.ends) == 2:
+            end='-p'
+        for i in range(len(output)):
+            bam=input[i]
+            counts=output[i]
+            # Additional featureCounts flags
+            # -F: format of the annotation file. 'GTF' by default.
+            # -g: attribute type. 'gene_id' by default. 
+            # -L: set for long-read inputs 
+            # -s: strand-specificity. 0 (unstranded & default), 1 (stranded), 2 (reversely stranded)
+            shell("featureCounts {end} "    
+                  "-s0 "
+                  "-T {THREADS} "
+                  "-a {params.gtf} "
+                  "-o {counts} "
+                  "{bam} &> {counts}.log")
+
+
+    
+    
