@@ -1,27 +1,41 @@
 
 
+###################### Sample info ######################
+
 SAMPLE:
-  SRR13508744: Ctrl
-  SRR13508749: Treatment
+  SRR13508743: Ctrl1
+  SRR13508744: Ctrl2
+  SRR13508748: Treatment1
+  SRR13508749: Treatment2
 
 
 
 
 FASTQ_LIST:
-  - Ctrl_1
-  - Treatment_1
+  - Ctrl1_1
+  - Ctrl2_1
+  - Treatment1_1
+  - Treatment2_1
 
 END: 
   - 1
 
 
 SRA:
+  - SRR13508743
   - SRR13508744
+  - SRR13508748
   - SRR13508749
 
 FASTQ_PREFIX:
-  - 'Ctrl'
-  - 'Treatment'
+  - Ctrl1
+  - Ctrl2
+  - Treatment1
+  - Treatment2
+
+
+###################### Reference info ######################
+
 
 REFERENCE_LINK:
   GENOME: 
@@ -33,7 +47,7 @@ REFERENCE_LINK:
     - 'gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf'
 
-
+###################### Extra-setting info ######################
 
 INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
 
