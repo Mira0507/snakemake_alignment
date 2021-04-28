@@ -11,8 +11,8 @@ THREADS=config['THREADS']
 
 rule all: 
     input: 
-        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),
-        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX'])
+        "star_output/featurecounts.tsv",
+        "hisat2_output/featurecounts.tsv"
 
 rule get_fastq:   # Creates fastq.gz files in fastq directory
     """
@@ -50,7 +50,7 @@ rule index_hisat2:
     input: 
         expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2])    # Decompressed reference genome file
     output:
-        temp("test_hisat2.txt")
+        expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])   # HISAT2 indexing files
     shell:
         "set +o pipefail; "
         "hisat2-build -f -o 4 "
@@ -58,9 +58,7 @@ rule index_hisat2:
         "--seed 67 "
         "{input} "
         "hisat2_index && "
-        "mkdir reference/hisat2_index && "
-        "mv *.ht2 reference/hisat2_index && "
-        "touch test_hisat2.txt"
+        "mv *.ht2 reference/hisat2_index"
 
 
 rule index_star:
@@ -68,15 +66,16 @@ rule index_star:
         fa=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file
         gtf=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
     output:
-        temp("test_star.txt")
+        "reference/star_index/Genome",   # STAR indexing files
+        "reference/star_index/SA",       # STAR indexing files
+        "reference/star_index/SAindex"   # STAR indexing files
     shell:
         "set +o pipefail; "
         "STAR --runThreadN {THREADS} "
         "--runMode genomeGenerate "
         "--genomeDir reference/star_index "
         "--genomeFastaFiles {input.fa} "
-        "--sjdbGTFfile {input.gtf} && "
-        "touch test_star.txt"
+        "--sjdbGTFfile {input.gtf}"
 
 
 
@@ -87,7 +86,7 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
     """
     input:
         expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),  # Gzipped FASTQ files
-        "test_hisat2.txt"
+        expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])  # HISAT2 indexing files
     output:
         expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),   # Bam files
         temp(expand("hisat2_output/{sample}.sam", sample=config['FASTQ_PREFIX']))
@@ -124,7 +123,9 @@ rule align_star:   # Creates bam files in star_output directory"
     input:
         expand("reference/{gen}", gen=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
         expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),                  # Gzipped FASTQ files
-        "test_star.txt"
+        "reference/star_index/Genome",
+        "reference/star_index/SA",
+        "reference/star_index/SAindex"
     output:
         expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX'])  # Bam files
     params:
@@ -175,26 +176,34 @@ rule featurecounts:
         ends=config['END'], # Read ends (e.g. [1] or [1, 2])
         gtf=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
     output:
-        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),  # Read count tsv file (STAR version)
-        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']) # Read count tsv file (HISAT2 version)
+        star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
+        hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
     run:
+        count_star=output.star
+        count_hisat2=output.hisat2
+        bam_star=input.star
+        bam_hisat2=input.hisat2
         end=""
         if len(params.ends) == 2:
             end='-p'
-        for i in range(len(output)):
-            bam=input[i]
-            counts=output[i]
-            # Additional featureCounts flags
-            # -F: format of the annotation file. 'GTF' by default.
-            # -g: attribute type. 'gene_id' by default. 
-            # -L: set for long-read inputs 
-            # -s: strand-specificity. 0 (unstranded & default), 1 (stranded), 2 (reversely stranded)
-            shell("featureCounts {end} "    
-                  "-s0 "
-                  "-T {THREADS} "
-                  "-a {params.gtf} "
-                  "-o {counts} "
-                  "{bam} &> {counts}.log")
+        # Additional featureCounts flags
+        # -F: format of the annotation file. 'GTF' by default.
+        # -g: attribute type. 'gene_id' by default. 
+        # -L: set for long-read inputs 
+        # -s: strand-specificity. 0 (unstranded & default), 1 (stranded), 2 (reversely stranded)
+        shell("set +o pipefail; "
+              "featureCounts {end} "    
+              "-s0 "
+              "-T {THREADS} "
+              "-a {params.gtf} "
+              "-o {count_star} "
+              "{bam_star} &> {count_star}.log && "
+              "featureCounts {end} "    
+              "-s0 "
+              "-T {THREADS} "
+              "-a {params.gtf} "
+              "-o {count_hisat2} "
+              "{bam_hisat2} &> {count_hisat2}.log")
 
 
     
