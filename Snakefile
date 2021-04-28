@@ -14,17 +14,16 @@ rule all:
         expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),
         expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX'])
 
-
 rule get_fastq:   # Creates fastq.gz files in fastq directory
     """
     This rule downloads SRA and converts to FASTQ files
     """
     output:
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])
+        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])  # Gzipped FASTQ files from SRA 
     params:
-        dic=config['SAMPLE'],
-        reads=config['END'],
-        sra=config['SRA']
+        dic=config['SAMPLE'],   # Sample dictionary
+        reads=config['END'],    # Reads (e.g. [1] or [1, 2]) 
+        sra=config['SRA']       # SRA number 
     run:
         shell("fastq-dump --split-files {params.sra} --gzip -X 100000")    # with or without -X 
         for key, value in params.dic.items(): 
@@ -32,28 +31,114 @@ rule get_fastq:   # Creates fastq.gz files in fastq directory
                   shell("mv {key}_{read}.fastq.gz fastq/{value}_{read}.fastq.gz") 
 
 
+rule get_reference:
+    params:
+        gen_link=config['REFERENCE_LINK']['GENOME'][0],   # Gencode reference genome file link 
+        gen_name=config['REFERENCE_LINK']['GENOME'][1],   # Output reference genome location & name 
+        anno_link=config['REFERENCE_LINK']['ANNOTATION'][0],  # Gencode GTF (annotation) file link
+        anno_name=config['REFERENCE_LINK']['ANNOTATION'][1]   # Output GTF file location & name
+    output:
+        gen=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file 
+        anno=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file  
+    shell:
+        "set +o pipefail; "
+        "wget -c {params.gen_link} -O reference/{params.gen_name} && "
+        "wget -c {params.anno_link} -O reference/{params.anno_name} && "
+        "gzip -d reference/*.gz"
+
+rule index_hisat2:
+    input: 
+        expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2])    # Decompressed reference genome file
+    output:
+        temp("test_hisat2.txt")
+    shell:
+        "set +o pipefail; "
+        "hisat2-build -f -o 4 "
+        "-p {THREADS} "
+        "--seed 67 "
+        "{input} "
+        "hisat2_index && "
+        "mkdir reference/hisat2_index && "
+        "mv *.ht2 reference/hisat2_index && "
+        "touch test_hisat2.txt"
+
+
+rule index_star:
+    input:
+        fa=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file
+        gtf=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
+    output:
+        temp("test_star.txt")
+    shell:
+        "set +o pipefail; "
+        "STAR --runThreadN {THREADS} "
+        "--runMode genomeGenerate "
+        "--genomeDir reference/star_index "
+        "--genomeFastaFiles {input.fa} "
+        "--sjdbGTFfile {input.gtf} && "
+        "touch test_star.txt"
+
+
+
+
+rule align_hisat2:    # Creates bam files in hisat2_output directory"
+    """
+    This rule aligns the reads using HISAT2    
+    """
+    input:
+        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),  # Gzipped FASTQ files
+        "test_hisat2.txt"
+    output:
+        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),   # Bam files
+        temp(expand("hisat2_output/{sample}.sam", sample=config['FASTQ_PREFIX']))
+    params:
+        files=config["FASTQ_PREFIX"],  # e.g. Ctrl, Treatment
+        read_ends=config['END'],       # e.g. [1] or [1, 2]
+        ext=config['FASTQ_EXT'],       # extension of the FASTQ files (e.g. .fastq.gz)
+        indexing=config['INDEX_HISAT'] # HISAT2 indexing location and file name prefix
+    run:
+        for i in range(len(params.files)):
+            p=params.files[i]
+            r1= "fastq/" + params.files[i] + "_1" + params.ext 
+            r2=""
+            read="-U " + r1
+            if len(params.read_ends) == 2: 
+                r2= "fastq/" + params.files[i] + "_2" + params.ext  
+                read="-1 " + r1 + " -2 " + r2
+            shell("hisat2 -q -p {THREADS} "
+                  "--seed 23 "
+                  "--summary-file hisat2_output/summary_{p}.txt "
+                  "-x {params.indexing} "
+                  "{read} "
+                  "-S hisat2_output/{p}.sam && "
+                  "samtools view -bS "
+                  "-@ {THREADS} "
+                  "hisat2_output/{p}.sam > hisat2_output/{p}.bam")
+
+
+
 rule align_star:   # Creates bam files in star_output directory"
     """
     This rule aligns the reads using STAR two-pass mode
     """
     input:
-        config["GTF"],
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])
+        expand("reference/{gen}", gen=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
+        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),                  # Gzipped FASTQ files
+        "test_star.txt"
     output:
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX'])  
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX'])  # Bam files
     params:
-        indexing=config["INDEX_STAR"],
-        indir=config['FASTQ_DIR'],
-        files=config["FASTQ_PREFIX"], 
-        read_ends=config['END'],
-        ext=config['FASTQ_EXT']
+        indexing=config["INDEX_STAR"],  # STAR indexing file directory
+        files=config["FASTQ_PREFIX"],   # e.g. Ctrl, Treatment
+        read_ends=config['END'],        # e.g. [1] or [1, 2]
+        ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
     run:
         for i in range(len(params.files)):
             p=params.files[i]
-            r1= params.indir + params.files[i] + "_1" + params.ext + " " 
+            r1= "fastq/" + params.files[i] + "_1" + params.ext + " " 
             r2=""
             if len(params.read_ends) == 2: 
-                r2= params.indir + params.files[i] + "_2" + params.ext + " " 
+                r2= "fastq/" + params.files[i] + "_2" + params.ext + " " 
             shell("STAR --runThreadN {THREADS} "  
                     "--runMode alignReads "  
                     "--readFilesCommand zcat "
@@ -78,53 +163,20 @@ rule align_star:   # Creates bam files in star_output directory"
                     "--chimOutType Junctions")     
 
 
-rule align_hisat2:    # Creates bam files in hisat2_output directory"
-    """
-    This rule aligns the reads using HISAT2    
-    """
-    input:
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])
-    output:
-        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),
-        temp(expand("hisat2_output/{sample}.sam", sample=config['FASTQ_PREFIX']))
-    params:
-        indir=config['FASTQ_DIR'],
-        files=config["FASTQ_PREFIX"], 
-        read_ends=config['END'],
-        ext=config['FASTQ_EXT'],
-        indexing=config['INDEX_HISAT']
-    run:
-        for i in range(len(params.files)):
-            p=params.files[i]
-            r1= params.indir + params.files[i] + "_1" + params.ext 
-            r2=""
-            read="-U " + r1
-            if len(params.read_ends) == 2: 
-                r2= params.indir + params.files[i] + "_2" + params.ext  
-                read="-1 " + r1 + " -2 " + r2
-            shell("hisat2 -q -p {THREADS} "
-                  "--seed 23 "
-                  "--summary-file hisat2_output/summary_{p}.txt "
-                  "-x {params.indexing} "
-                  "{read} "
-                  "-S hisat2_output/{p}.sam && "
-                  "samtools view -bS "
-                  "-@ {THREADS} "
-                  "hisat2_output/{p}.sam > hisat2_output/{p}.bam")
 
 rule featurecounts:
     """
     This rule assesses read counts using featureCounts
     """
     input:
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX']), 
-        expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX'])
+        star=expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX']),  # Bam files from STAR
+        hisat2=expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX'])    # Bam files from HISAT2
     params:
-        ends=config['END'],
-        gtf=config['GTF']
+        ends=config['END'], # Read ends (e.g. [1] or [1, 2])
+        gtf=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
     output:
-        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),
-        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX'])
+        expand("star_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']),  # Read count tsv file (STAR version)
+        expand("hisat2_output/featurecounts_{sample}.tsv", sample=config['FASTQ_PREFIX']) # Read count tsv file (HISAT2 version)
     run:
         end=""
         if len(params.ends) == 2:
