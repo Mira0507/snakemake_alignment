@@ -1,0 +1,25 @@
+name: snakemake_r
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - trf
+  - seqtk
+  - entrez-direct
+  - r-base
+  - r-tidyverse
+  - r-data.table
+  - r-ggplot2
+  - r-markdown
+  - r-upsetr
+  - r-ggrepel
+  - r-ggplotify
+  - r-gridextra
+  - r-pheatmap
+  - bioconductor-deseq2
+  - bioconductor-annotationhub
+  - bioconductor-seqc
+  - bioconductor-ensembldb 
+  - bioconductor-biomart
+prefix: /home/mira/miniconda3/envs/snakemake_mapping

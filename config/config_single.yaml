@@ -1,37 +1,45 @@
-
+---
 
 ###################### Sample info ######################
 
 SAMPLE:
-  SRR13508743: Ctrl1
-  SRR13508744: Ctrl2
-  SRR13508748: Treatment1
-  SRR13508749: Treatment2
-
+  SRR13190144:  DMSO_rep1
+  SRR13190145:  DMSO_rep2
+  SRR13190146:  DMSO_rep3
+  SRR13190150:  SR0813_rep1
+  SRR13190151:  SR0813_rep2
+  SRR13190152:  SR0813_rep3
 
 
 
 FASTQ_LIST:
-  - Ctrl1_1
-  - Ctrl2_1
-  - Treatment1_1
-  - Treatment2_1
+  - DMSO_rep1_1
+  - DMSO_rep2_1
+  - DMSO_rep3_1
+  - SR0813_rep1_1
+  - SR0813_rep2_1
+  - SR0813_rep3_1
 
 END: 
   - 1
 
 
 SRA:
-  - SRR13508743
-  - SRR13508744
-  - SRR13508748
-  - SRR13508749
+  - SRR13190144
+  - SRR13190145
+  - SRR13190146
+  - SRR13190150
+  - SRR13190151
+  - SRR13190152
+
 
 FASTQ_PREFIX:
-  - Ctrl1
-  - Ctrl2
-  - Treatment1
-  - Treatment2
+  - DMSO_rep1
+  - DMSO_rep2
+  - DMSO_rep3
+  - SR0813_rep1
+  - SR0813_rep2
+  - SR0813_rep3
 
 
 ###################### Reference info ######################
@@ -46,6 +54,10 @@ REFERENCE_LINK:
     - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf'
+  TRANSCRIPTOME:
+    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.transcripts.fa.gz'
+    - 'gencode.v37.transcripts.fa.gz'
+    - 'gencode.v37.transcripts.fa'
 
 ###################### Extra-setting info ######################
 

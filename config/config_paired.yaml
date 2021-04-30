@@ -2,23 +2,25 @@
 ###################### Sample info ######################
 
 SAMPLE:
-  SRR8245179: Treated1
-  SRR8245180: Treated2
   SRR8245176: Untreated1
   SRR8245177: Untreated2
+  SRR8245179: Treated1
+  SRR8245180: Treated2
+  
 
 
 
 
 FASTQ_LIST:
-  - Treated1_1
-  - Treated1_2
-  - Treated2_1
-  - Treated2_2
   - Untreated1_1
   - Untreated1_2
   - Untreated2_1
   - Untreated2_2
+  - Treated1_1
+  - Treated1_2
+  - Treated2_1
+  - Treated2_2
+  
 
 END: 
   - 1
@@ -26,16 +28,18 @@ END:
 
 
 SRA:
-  - SRR8245179
-  - SRR8245180
   - SRR8245176
   - SRR8245177
+  - SRR8245179
+  - SRR8245180
+  
 
 FASTQ_PREFIX:
-  - Treated1
-  - Treated2
   - Untreated1
   - Untreated2
+  - Treated1
+  - Treated2
+  
 
 
 ###################### Reference info ######################
