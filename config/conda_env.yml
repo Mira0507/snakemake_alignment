@@ -154,6 +154,7 @@ dependencies:
   - sqlite=3.34.0=h74cdb3f_0
   - sra-tools=2.8.0=0
   - star=2.7.6a=0
+  - subread=2.0.1=h5bf99c6_1
   - tbb=2021.1.1=h4bd325d_0
   - tk=8.6.10=h21135ba_1
   - toposort=1.6=pyhd8ed1ab_0
