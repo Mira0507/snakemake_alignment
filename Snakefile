@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired.yaml"    # Sets path to the config file
+configfile: "config/config_single.yaml"    # Sets path to the config file
 #######################################################################################
 
 shell.prefix('set -euo pipefail; ')
@@ -25,7 +25,7 @@ rule get_fastq:   # Creates fastq.gz files in fastq directory
         reads=config['END'],    # Reads (e.g. [1] or [1, 2]) 
         sra=config['SRA']       # SRA number 
     run:
-        shell("fastq-dump --split-files {params.sra} --gzip -X 100000")    # with or without -X 
+        shell("fastq-dump --split-files {params.sra} --gzip")    # with or without -X 100000
         for key, value in params.dic.items(): 
               for read in params.reads: 
                   shell("mv {key}_{read}.fastq.gz fastq/{value}_{read}.fastq.gz") 
@@ -36,14 +36,19 @@ rule get_reference:
         gen_link=config['REFERENCE_LINK']['GENOME'][0],   # Gencode reference genome file link 
         gen_name=config['REFERENCE_LINK']['GENOME'][1],   # Output reference genome location & name 
         anno_link=config['REFERENCE_LINK']['ANNOTATION'][0],  # Gencode GTF (annotation) file link
-        anno_name=config['REFERENCE_LINK']['ANNOTATION'][1]   # Output GTF file location & name
+        anno_name=config['REFERENCE_LINK']['ANNOTATION'][1],  # Output GTF file location & name
+        trans_link=config['REFERENCE_LINK']['TRANSCRIPTOME'][0],  # Gencode reference transcriptome file link
+        trans_name=config['REFERENCE_LINK']['TRANSCRIPTOME'][1]   # Output reference transcriptome
+
     output:
         gen=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file 
-        anno=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file  
+        anno=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
+        trans=expand("reference/{anno}", anno=config['REFERENCE_LINK']['TRANSCRIPTOME'][2])
     shell:
         "set +o pipefail; "
         "wget -c {params.gen_link} -O reference/{params.gen_name} && "
         "wget -c {params.anno_link} -O reference/{params.anno_name} && "
+        "wget -c {params.trans_link} -O reference/{params.trans_name} && "
         "gzip -d reference/*.gz"
 
 rule index_hisat2:
