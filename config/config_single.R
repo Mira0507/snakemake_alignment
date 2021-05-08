@@ -19,5 +19,9 @@ basemean.comparison.ylog <- T
 lfc.comparison.ylog <- F
 padj.comparison.ylog <- F
 
+mart.dataset <- "hsapiens_gene_ensembl"
+
+geneid.species <- "ENSG"
+
 
 

@@ -5,8 +5,7 @@ channels:
   - defaults
 dependencies:
   - trf
-  - seqtk
-  - entrez-direct
+  - snakemake-minimal
   - r-base
   - r-tidyverse
   - r-data.table
@@ -17,9 +16,10 @@ dependencies:
   - r-ggplotify
   - r-gridextra
   - r-pheatmap
+  - r-httr
+  - r-jsonlite
   - bioconductor-deseq2
   - bioconductor-annotationhub
   - bioconductor-seqc
   - bioconductor-ensembldb 
   - bioconductor-biomart
-prefix: /home/mira/miniconda3/envs/snakemake_mapping
