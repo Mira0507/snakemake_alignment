@@ -92,14 +92,13 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
     This rule aligns the reads using HISAT2    
     """
     input:
-        expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),  # Gzipped FASTQ files
-        expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])  # HISAT2 indexing files
+        fastq=expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),  # Gzipped FASTQ files
+        index=expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])  # HISAT2 indexing files
     output:
         expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),   # Bam files
         temp(expand("hisat2_output/{sample}.sam", sample=config['FASTQ_PREFIX']))
     params:
         files=config["FASTQ_PREFIX"],  # e.g. Ctrl, Treatment
-        read_ends=config['END'],       # e.g. [1] or [1, 2]
         ext=config['FASTQ_EXT'],       # extension of the FASTQ files (e.g. .fastq.gz)
         indexing=config['INDEX_HISAT'] # HISAT2 indexing location and file name prefix
     threads: 8
@@ -109,7 +108,7 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
             r1= "fastq/" + params.files[i] + "_1" + params.ext 
             r2=""
             read="-U " + r1
-            if len(params.read_ends) == 2: 
+            if len(input.fastq) == 2 * len(params.files): 
                 r2= "fastq/" + params.files[i] + "_2" + params.ext  
                 read="-1 " + r1 + " -2 " + r2
             shell("hisat2 -q -p {threads} "
@@ -129,17 +128,16 @@ rule align_star:   # Creates bam files in star_output directory"
     This rule aligns the reads using STAR two-pass mode
     """
     input:
-        expand("reference/{gen}", gen=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
-        expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),                  # Gzipped FASTQ files
-        "reference/star_index/Genome",
-        "reference/star_index/SA",
-        "reference/star_index/SAindex"
+        gtf=expand("reference/{gen}", gen=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
+        fastq=expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),                  # Gzipped FASTQ files
+        index1="reference/star_index/Genome",
+        index2="reference/star_index/SA",
+        index3="reference/star_index/SAindex"
     output:
         expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=config['FASTQ_PREFIX'])  # Bam files
     params:
         indexing=config["INDEX_STAR"],  # STAR indexing file directory
         files=config["FASTQ_PREFIX"],   # e.g. Ctrl, Treatment
-        read_ends=config['END'],        # e.g. [1] or [1, 2]
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
     threads: 8
     run:
@@ -147,13 +145,13 @@ rule align_star:   # Creates bam files in star_output directory"
             p=params.files[i]
             r1= "fastq/" + params.files[i] + "_1" + params.ext + " " 
             r2=""
-            if len(params.read_ends) == 2: 
+            if len(input.fastq) == 2 * len(params.files): 
                 r2= "fastq/" + params.files[i] + "_2" + params.ext + " " 
             shell("STAR --runThreadN {threads} "  
                     "--runMode alignReads "  
                     "--readFilesCommand zcat "
                     "--genomeDir {params.indexing} " 
-                    "--sjdbGTFfile {input[0]} "  
+                    "--sjdbGTFfile {input.gtf} "  
                     "--sjdbOverhang 100 "  
                     "--readFilesIn {r1}{r2}"  
                     "--outFileNamePrefix star_output/{p} "
