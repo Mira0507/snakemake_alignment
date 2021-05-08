@@ -7,25 +7,25 @@ shell.prefix('set -euo pipefail; ')
 shell.executable('/bin/bash')
 
 
-THREADS=config['THREADS']
 
 rule all: 
     input: 
-        "star_output/featurecounts.tsv",
+        "star_output/featurecounts.tsv",  
         "hisat2_output/featurecounts.tsv"
+
 
 rule get_fastq:   # Creates fastq.gz files in fastq directory
     """
     This rule downloads SRA and converts to FASTQ files
     """
     output:
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST'])  # Gzipped FASTQ files from SRA 
+        expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END'])  # Gzipped FASTQ files from SRA 
     params:
         dic=config['SAMPLE'],   # Sample dictionary
         reads=config['END'],    # Reads (e.g. [1] or [1, 2]) 
         sra=config['SRA']       # SRA number 
     run:
-        shell("fastq-dump --split-files {params.sra} --gzip")    # with or without -X 100000
+        shell("fastq-dump --split-files {params.sra} --gzip -X 100000")    # with or without -X 100000
         for key, value in params.dic.items(): 
               for read in params.reads: 
                   shell("mv {key}_{read}.fastq.gz fastq/{value}_{read}.fastq.gz") 
@@ -56,10 +56,11 @@ rule index_hisat2:
         expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2])    # Decompressed reference genome file
     output:
         expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])   # HISAT2 indexing files
+    threads: 8
     shell:
         "set +o pipefail; "
         "hisat2-build -f -o 4 "
-        "-p {THREADS} "
+        "-p {threads} "
         "--seed 67 "
         "{input} "
         "hisat2_index && "
@@ -74,9 +75,10 @@ rule index_star:
         "reference/star_index/Genome",   # STAR indexing files
         "reference/star_index/SA",       # STAR indexing files
         "reference/star_index/SAindex"   # STAR indexing files
+    threads: 8
     shell:
         "set +o pipefail; "
-        "STAR --runThreadN {THREADS} "
+        "STAR --runThreadN {threads} "
         "--runMode genomeGenerate "
         "--genomeDir reference/star_index "
         "--genomeFastaFiles {input.fa} "
@@ -90,7 +92,7 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
     This rule aligns the reads using HISAT2    
     """
     input:
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),  # Gzipped FASTQ files
+        expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),  # Gzipped FASTQ files
         expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])  # HISAT2 indexing files
     output:
         expand("hisat2_output/{sample}.bam", sample=config['FASTQ_PREFIX']),   # Bam files
@@ -100,6 +102,7 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
         read_ends=config['END'],       # e.g. [1] or [1, 2]
         ext=config['FASTQ_EXT'],       # extension of the FASTQ files (e.g. .fastq.gz)
         indexing=config['INDEX_HISAT'] # HISAT2 indexing location and file name prefix
+    threads: 8
     run:
         for i in range(len(params.files)):
             p=params.files[i]
@@ -109,14 +112,14 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
             if len(params.read_ends) == 2: 
                 r2= "fastq/" + params.files[i] + "_2" + params.ext  
                 read="-1 " + r1 + " -2 " + r2
-            shell("hisat2 -q -p {THREADS} "
+            shell("hisat2 -q -p {threads} "
                   "--seed 23 "
                   "--summary-file hisat2_output/summary_{p}.txt "
                   "-x {params.indexing} "
                   "{read} "
                   "-S hisat2_output/{p}.sam && "
                   "samtools view -bS "
-                  "-@ {THREADS} "
+                  "-@ {threads} "
                   "hisat2_output/{p}.sam > hisat2_output/{p}.bam")
 
 
@@ -127,7 +130,7 @@ rule align_star:   # Creates bam files in star_output directory"
     """
     input:
         expand("reference/{gen}", gen=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
-        expand("fastq/{out}.fastq.gz", out=config['FASTQ_LIST']),                  # Gzipped FASTQ files
+        expand("fastq/{sample}_{end}.fastq.gz", sample=config['FASTQ_PREFIX'], end=config['END']),                  # Gzipped FASTQ files
         "reference/star_index/Genome",
         "reference/star_index/SA",
         "reference/star_index/SAindex"
@@ -138,6 +141,7 @@ rule align_star:   # Creates bam files in star_output directory"
         files=config["FASTQ_PREFIX"],   # e.g. Ctrl, Treatment
         read_ends=config['END'],        # e.g. [1] or [1, 2]
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
+    threads: 8
     run:
         for i in range(len(params.files)):
             p=params.files[i]
@@ -145,7 +149,7 @@ rule align_star:   # Creates bam files in star_output directory"
             r2=""
             if len(params.read_ends) == 2: 
                 r2= "fastq/" + params.files[i] + "_2" + params.ext + " " 
-            shell("STAR --runThreadN {THREADS} "  
+            shell("STAR --runThreadN {threads} "  
                     "--runMode alignReads "  
                     "--readFilesCommand zcat "
                     "--genomeDir {params.indexing} " 
@@ -183,6 +187,7 @@ rule featurecounts:
     output:
         star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
         hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
+    threads: 8
     run:
         count_star=output.star
         count_hisat2=output.hisat2
@@ -199,17 +204,16 @@ rule featurecounts:
         shell("set +o pipefail; "
               "featureCounts {end} "    
               "-s0 "
-              "-T {THREADS} "
+              "-T {threads} "
               "-a {params.gtf} "
               "-o {count_star} "
               "{bam_star} &> {count_star}.log && "
               "featureCounts {end} "    
               "-s0 "
-              "-T {THREADS} "
+              "-T {threads} "
               "-a {params.gtf} "
               "-o {count_hisat2} "
               "{bam_hisat2} &> {count_hisat2}.log")
 
 
-    
-    
+
