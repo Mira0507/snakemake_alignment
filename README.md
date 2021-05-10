@@ -6,23 +6,23 @@
 
 #### 2. Snakemake 
 
-- [Snakefile](https://github.com/Mira0507/snakemake_alignment)
+- [Snakefile](https://github.com/Mira0507/snakemake_alignment): snakefile 
 
-- [config/config_single.yaml (single-end testing)](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_single.yaml)
+- [config/config_single.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_single.yaml): snakemake config file (single-end testing)
 
-- [config/config_paired.yaml (paired-end testing)](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.yaml)
+- [config/config_paired.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.yaml): snakemake config file (paired-end testing)
 
 #### 3. Differential expression (DE) analysis
 
 - [DE_analysis/DE.Rmd](https://github.com/Mira0507/snakemake_alignment/blob/master/DE_analysis/DE.Rmd): R script
 
-- [config/config_single.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_single.R): R config file (single-end reads)
+- [config/config_single.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_single.R): R config file (single-end testing)
 
-- [config/config_paired.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.R): R config file (paired-end reads)
+- [config/config_paired.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.R): R config file (paired-end testing)
 
-- [config/sample_single.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_single.csv): sample table csv file (single-end reads)
+- [config/sample_single.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_single.csv): sample table csv file (single-end testing)
 
-- [config/sample_paired.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_paired.csv): sample table csv file (paired-end reads)
+- [config/sample_paired.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_paired.csv): sample table csv file (paired-end testing)
 
 - [config/conda_r.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/conda_r.yaml): conda environment for the rule running R script
 
@@ -33,7 +33,14 @@
 
 #### 5. Running snakemake
 
-- Reference: [Snakemake Command Line Arguments](https://snakemake.readthedocs.io/en/stable/executing/cli.html)
+- Reference: [Snakemake Command Line Arguments](https://snakemake.readthedocs.io/en/stable/executing/cli.html) (paired-end testing)
+
+- Modifying files:
+    - Snakefile: configfile: "path/to/config.yaml" (path to the your snakemake config file)
+    - config/config.yaml: snakemake config file
+    - DE_analysis/DE.Rmd: source("path/to/config.R") 
+    - config/config.R: species, sample.csv (file path), alpha (max FDR), mLog (minimum log2FoldChange of interest)
+    - config/sample.csv: the sample column has to correspond to the sample info in your snakemake config file
 
 **- Dry run**
 
