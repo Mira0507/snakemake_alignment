@@ -36,13 +36,13 @@
 - Reference: [Snakemake Command Line Arguments](https://snakemake.readthedocs.io/en/stable/executing/cli.html) (paired-end testing)
 
 - Modifying files:
-    - Snakefile: configfile: "path/to/config.yaml" (path to the your snakemake config file)
-    - config/config.yaml: snakemake config file
-    - DE_analysis/DE.Rmd: source("path/to/config.R") 
-    - config/config.R: species, sample.csv (file path), alpha (max FDR), mLog (minimum log2FoldChange of interest)
-    - config/sample.csv: the sample column has to correspond to the sample info in your snakemake config file
+    - **Snakefile**: configfile: "path/to/config.yaml" (path to the your snakemake config file)
+    - **config/config.yaml**: snakemake config file
+    - **DE_analysis/DE.Rmd**: source("path/to/config.R") 
+    - **config/config.R**: species, sample.csv (file path), alpha (max FDR), mLog (minimum log2FoldChange of interest)
+    - **config/sample.csv**: the sample column has to correspond to the sample info in your snakemake config file
 
-**- Dry run**
+- **Dry run**
 
 
 ```bash
@@ -54,7 +54,7 @@ snakemake -n
 ```
 
 
-**- DAG visualization**
+- **DAG visualization**
 
 ```bash
 
@@ -67,7 +67,7 @@ snakemake --dag | dot -Tpdf > dag.pdf
 ```
 
 
-**- Run**
+- **Run**
 
 ```bash
 #!/bin/bash
