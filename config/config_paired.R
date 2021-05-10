@@ -7,7 +7,7 @@ featurecounts.path <- list(HISAT2="../hisat2_output/featurecounts.tsv",
 
 transcriptome <- "../reference/gencode.v37.transcripts.fa"
 
-sample.csv <- "../config/sample_single.csv"   # Path to the sample table csv file
+sample.csv <- "../config/sample_paired.csv"   # Path to the sample table csv file
 
 alpha <- 0.1   # Set threshold FDR
 
