@@ -25,13 +25,16 @@ rule get_fastq:   # Creates fastq.gz files in fastq directory
         reads=config['END'],    # Reads (e.g. [1] or [1, 2]) 
         sra=config['SRA']       # SRA number 
     run:
-        shell("fastq-dump --split-files {params.sra} --gzip -X 100000")    # with or without -X 100000
+        shell("fastq-dump --split-files {params.sra} --gzip")    # with or without -X 100000
         for key, value in params.dic.items(): 
               for read in params.reads: 
                   shell("mv {key}_{read}.fastq.gz fastq/{value}_{read}.fastq.gz") 
 
 
-rule get_reference:
+rule get_reference:    
+    """
+    This rule downloads reference files
+    """
     params:
         gen_link=config['REFERENCE_LINK']['GENOME'][0],   # Gencode reference genome file link 
         gen_name=config['REFERENCE_LINK']['GENOME'][1],   # Output reference genome location & name 
@@ -52,6 +55,9 @@ rule get_reference:
         "gzip -d reference/*.gz"
 
 rule index_hisat2:
+    """
+    This rule constructs HISAT2 index files
+    """
     input: 
         expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2])    # Decompressed reference genome file
     output:
@@ -68,6 +74,9 @@ rule index_hisat2:
 
 
 rule index_star:
+    """
+    This rule constructs STAR index files
+    """
     input:
         fa=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file
         gtf=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
