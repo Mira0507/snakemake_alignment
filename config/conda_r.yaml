@@ -1,0 +1,23 @@
+name: snakemake_r
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - trf
+  - r-base
+  - r-tidyverse
+  - r-data.table
+  - r-ggplot2
+  - r-markdown
+  - r-upsetr
+  - r-ggrepel
+  - r-ggplotify
+  - r-gridextra
+  - r-pheatmap
+  - r-httr
+  - r-jsonlite
+  - bioconductor-deseq2
+  - bioconductor-annotationhub
+  - bioconductor-seqc
+  - bioconductor-ensembldb 
