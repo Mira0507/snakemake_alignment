@@ -14,17 +14,17 @@
 
 #### 3. Differential expression (DE) analysis
 
-- [DE_analysis/DE.Rmd](): R script
+- [DE_analysis/DE.Rmd](https://github.com/Mira0507/snakemake_alignment/blob/master/DE_analysis/DE.Rmd): R script
 
-- [config/config_single.R](): R config file (single-end reads)
+- [config/config_single.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_single.R): R config file (single-end reads)
 
-- [config/config_paired.R](): R config file (paired-end reads)
+- [config/config_paired.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.R): R config file (paired-end reads)
 
-- [config/sample_single.csv](): sample table csv file (single-end reads)
+- [config/sample_single.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_single.csv): sample table csv file (single-end reads)
 
-- [config/sample_paired.csv](): sample table csv file (paired-end reads)
+- [config/sample_paired.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_paired.csv): sample table csv file (paired-end reads)
 
-- [config/conda_r.yaml](): conda environment for the rule running R script
+- [config/conda_r.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/conda_r.yaml): conda environment for the rule running R script
 
 #### 4. Error 
 
