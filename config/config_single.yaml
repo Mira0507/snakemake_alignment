@@ -61,11 +61,6 @@ INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files 
 
 
 
-STAR_OUT: "star_output"  # Assigns STAR output directory
-
-HISAT2_OUT: "hisat2_output"  # Assigns HISAT2 output directory
-
-
 FASTQ_EXT: '.fastq.gz'
 
 RCONFIG: 'config/config_single.R'
