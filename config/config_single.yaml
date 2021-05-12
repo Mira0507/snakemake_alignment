@@ -48,7 +48,6 @@ REFERENCE_LINK:
     - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf'
-    - 'gencode.v37.transcripts.fa'
 
 ###################### Extra-setting info ######################
 
