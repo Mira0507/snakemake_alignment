@@ -33,7 +33,7 @@
 
 #### 5. Running snakemake
 
-- Reference: [Snakemake Command Line Arguments](https://snakemake.readthedocs.io/en/stable/executing/cli.html) (paired-end testing)
+- Reference: [Snakemake Command Line Arguments](https://snakemake.readthedocs.io/en/stable/executing/cli.html) 
 
 - Modifying files:
     - **Snakefile**: configfile: "path/to/config.yaml" (path to the your snakemake config file)
