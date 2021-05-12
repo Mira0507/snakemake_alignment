@@ -74,6 +74,6 @@ snakemake --dag | dot -Tpdf > dag.pdf
 
 # Either -j or --cores assignes the number of cores
 # --use-conda is needed for the rule running DE analysis with isolated conda env
-snakemake -j 8 --use-conda
+snakemake -j 10 --use-conda
 
 ```
