@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired.yaml"    # Sets path to the config file
+configfile: "config/config_single.yaml"    # Sets path to the config file
 #######################################################################################
 
 shell.prefix('set -euo pipefail; ')
@@ -77,7 +77,7 @@ rule index_star:
         "reference/star_index/Genome",   # STAR indexing files
         "reference/star_index/SA",       # STAR indexing files
         "reference/star_index/SAindex"   # STAR indexing files
-    threads: 10
+    threads: 8
     shell:
         "set +o pipefail; "
         "STAR --runThreadN {threads} "
@@ -141,7 +141,7 @@ rule align_star:   # Creates bam files in star_output directory"
         indexing=config["INDEX_STAR"],  # STAR indexing file directory
         files=config["FASTQ_PREFIX"],   # e.g. Ctrl, Treatment
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
-    threads: 10
+    threads: 8
     run:
         for i in range(len(params.files)):
             p=params.files[i]
@@ -187,7 +187,7 @@ rule featurecounts:
     output:
         star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
         hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
-    threads: 16
+    threads: 4
     run:
         count_star=output.star
         count_hisat2=output.hisat2
