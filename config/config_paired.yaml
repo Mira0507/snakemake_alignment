@@ -4,8 +4,10 @@
 SAMPLE:
   SRR8245176: Untreated1
   SRR8245177: Untreated2
+  SRR8245178: Untreated3
   SRR8245179: Treated1
   SRR8245180: Treated2
+  SRR8245181: Treated3
   
 
 
@@ -19,15 +21,19 @@ END:
 SRA:
   - SRR8245176
   - SRR8245177
+  - SRR8245178
   - SRR8245179
   - SRR8245180
+  - SRR8245181
   
 
 FASTQ_PREFIX:
   - Untreated1
   - Untreated2
+  - Untreated3
   - Treated1
   - Treated2
+  - Treated3
   
 
 
@@ -42,10 +48,6 @@ REFERENCE_LINK:
     - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf.gz'
     - 'gencode.v37.primary_assembly.annotation.gtf'
-  TRANSCRIPTOME:
-    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.transcripts.fa.gz'
-    - 'gencode.v37.transcripts.fa.gz'
-    - 'gencode.v37.transcripts.fa'
 
 
 ###################### Extra-setting info ######################
@@ -58,4 +60,6 @@ INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files 
 FASTQ_EXT: '.fastq.gz'
 
 CONDA: "config/conda_r.yaml"
+
+RCONFIG: 'config/config_single.R'
   

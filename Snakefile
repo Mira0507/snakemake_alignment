@@ -10,9 +10,7 @@ shell.executable('/bin/bash')
 
 rule all: 
     input: 
-        "star_output/featurecounts.tsv",  
-        "hisat2_output/featurecounts.tsv"
-
+        "DE_analysis/DE.html"
 
 rule get_fastq:   # Creates fastq.gz files in fastq directory
     """
@@ -39,19 +37,14 @@ rule get_reference:
         gen_link=config['REFERENCE_LINK']['GENOME'][0],   # Gencode reference genome file link 
         gen_name=config['REFERENCE_LINK']['GENOME'][1],   # Output reference genome location & name 
         anno_link=config['REFERENCE_LINK']['ANNOTATION'][0],  # Gencode GTF (annotation) file link
-        anno_name=config['REFERENCE_LINK']['ANNOTATION'][1],  # Output GTF file location & name
-        trans_link=config['REFERENCE_LINK']['TRANSCRIPTOME'][0],  # Gencode reference transcriptome file link
-        trans_name=config['REFERENCE_LINK']['TRANSCRIPTOME'][1]   # Output reference transcriptome
-
+        anno_name=config['REFERENCE_LINK']['ANNOTATION'][1]   # Output GTF file location & name
     output:
         gen=expand("reference/{gen}", gen=config['REFERENCE_LINK']['GENOME'][2]),  # Decompressed reference genome file 
-        anno=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2]),  # Decompressed GTF file
-        trans=expand("reference/{anno}", anno=config['REFERENCE_LINK']['TRANSCRIPTOME'][2])
+        anno=expand("reference/{anno}", anno=config['REFERENCE_LINK']['ANNOTATION'][2])  # Decompressed GTF file
     shell:
         "set +o pipefail; "
         "wget -c {params.gen_link} -O reference/{params.gen_name} && "
         "wget -c {params.anno_link} -O reference/{params.anno_name} && "
-        "wget -c {params.trans_link} -O reference/{params.trans_name} && "
         "gzip -d reference/*.gz"
 
 rule index_hisat2:
@@ -194,7 +187,7 @@ rule featurecounts:
     output:
         star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
         hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
-    threads: 8
+    threads: 4
     run:
         count_star=output.star
         count_hisat2=output.hisat2
@@ -224,3 +217,24 @@ rule featurecounts:
 
 
 
+rule deseq2:
+    """
+    This rule performs differential expression (DE) analysis using DESeq2 in R
+    """
+    input:
+        star_reads="star_output/featurecounts.tsv",  # Assessed read counts from STAR aligner 
+        hisat2_reads="hisat2_output/featurecounts.tsv",  # Assessed read counts from HISAT2 aligner
+        rmd="DE_analysis/DE.Rmd",                    # R scripts for downstream DE analysis
+        rconfig=config["RCONFIG"]                    # config file for Rmd 
+    output:
+        "DE_analysis/DE.html",           # Output html file from Rmd 
+        "DE_analysis/lfc_STAR.csv",      # DESeq2 result from STAR-mediated alignment 
+        "DE_analysis/lfc_HISAT2.csv",    # DESeq2 result from HISAT2-mediated alignment
+        "DE_analysis/baseMean_difference.csv",        # Gene discordance table in baseMean
+        "DE_analysis/log2FoldChange_difference.csv",  # Gene discordance table in log2FoldChange
+        "DE_analysis/padj_difference.csv",            # Gene discordance table in padj
+        temp("DE_analysis/trf_input.fa") 
+    conda:
+        config['CONDA']                           # conda env config file
+    shell:
+        "Rscript -e \"rmarkdown::render('{input.rmd}')\""   # Requires "snakemake -j 8 --use-conda" command when running snakemake
