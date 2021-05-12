@@ -5,7 +5,7 @@ my.species <- "Homo sapiens"   # Species of the input dataset
 featurecounts.path <- list(HISAT2="../hisat2_output/featurecounts.tsv",
                            STAR="../star_output/featurecounts.tsv")  # Paths to featurecounts count matrices 
 
-transcriptome <- "../reference/gencode.v37.transcripts.fa"
+
 
 sample.csv <- "../config/sample_single.csv"   # Path to the sample table csv file
 
@@ -21,7 +21,7 @@ padj.comparison.ylog <- F
 
 
 
-geneid.species <- "ENSG"
+geneid.species <- "ENSG"  # Ensembl code for gene id given by species (e.g. ENSG (human), ENSMUSG (mouse))
 
 
 
