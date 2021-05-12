@@ -1,7 +1,9 @@
 ---
-output: html_document
 title: "STAR vs HISAT2 (Focused on Mean/Fold/FDR)"
 author: "Mira Sohn" 
+output:
+    html_document:
+        self_contained: false
 ---
 
 ```{r global_options, include=FALSE}
@@ -41,7 +43,7 @@ library(jsonlite)
 ```
 
 
-## Loading R config file
+## Loading R config file 
 
 
 ```{r}
@@ -688,11 +690,11 @@ xlim(-10, 10)    # Change xlim by datatype
 
 #### - Reference: [**DESeq2 doc "MA-plot"**](https://www.bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#ma-plot)
 
-#### - **x-axis**: expression level (baseMean))
+#### - **x-axis**: expression level (baseMean)
 
 #### - **y-axis**: fold change (log2FoldChange)
 
-#### - **Red dashed lines**: log2FoldChange = -1 and 1
+#### - **Red dashed lines**: log2FoldChange = -1 and 1 
 
 ```{r MAplot}
 
@@ -720,7 +722,7 @@ ggplot(lfc.dataframe, aes(x=baseMean, y=log2FoldChange, color=FDR)) +
 
 #### - The heatmaps display **z-scores** of the normalized counts
 
-#### - In this analysis, **mLog = 1**
+#### - In this analysis, **mLog = 1** by default (see config.R file)
 
 #### - References: [**Harvard Chan Bioinformatics Core workshop**](https://github.com/hbctraining/DGE_workshop_salmon_online/blob/master/lessons/06_DGE_visualizing_results.md), [**DESeq2 doc "Heatmap of the count matrix"**](https://www.bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#heatmap-of-the-count-matrix)
 
@@ -829,7 +831,7 @@ ggplot(NA.genes,
 # Create a data frame storing the number of transcripts by gene id
 AnnoDb.ntrans <- AnnoDb %>% 
     group_by(GENEID) %>% 
-    summarize(num.trans=n_distinct(TXID))
+    summarize(Alternative.Transcripts=n_distinct(TXID))
 
 # Create an empty list storing significant gene lfc tables 
 sigList <- list() 
@@ -870,19 +872,6 @@ lfcTable <- lfcTable %>%
             left_join(AnnoDb.ntrans, by="GENEID")
 
 
-# Set a function to create a vector storing plot labels
-plotlabels.fn <- function(myvec, mylist, num) {
-
-    vec <- c()
-
-    for (i in 1:num) {
-        vec <- c(vec, c(myvec[i], rep("", nrow(mylist[[i]]) - 1)))
-    }
-
-    return(vec)
-
-}
-
 
 
 # Explore the output table
@@ -891,7 +880,16 @@ dim(lfcTable)
 
 ```
 
-```{r comparison_prep}
+## Relationship between baseMean/log2FoldChange/padj with the number of alternative transcripts 
+
+#### - Variables of interest: baseMean, log2FoldChange, and padj 
+
+#### - R-squared: tests whether the two variables are correlated
+
+
+
+
+```{r comparison, fig_width=12}
 
 
 my.param <- c("baseMean", "log2FoldChange", "padj")
@@ -899,238 +897,105 @@ my.param <- c("baseMean", "log2FoldChange", "padj")
 
 # Slice and clean the data frame for input
 lfcTable.comp <- lfcTable %>% 
-    dplyr::select(GENEID, num.trans, starts_with(my.param)) %>% 
-    gather(Category, Value, -GENEID, -num.trans) %>% 
+    dplyr::select(GENEID, Alternative.Transcripts, starts_with(my.param)) %>% 
+    gather(Category, Value, -GENEID, -Alternative.Transcripts) %>% 
     separate(Category, c("Metric", "Aligner"), sep="_") %>% pivot_wider(names_from=Aligner, values_from=Value) %>% 
     group_by(Metric) %>%
     nest() %>% 
 
     # Calculate correlation coefficients between aligners by metric
-    mutate(star.hisat.corr=map_dbl(data, ~ cor(.x$STAR, .x$HISAT2))) 
+    mutate(star.hisat.corr=map_dbl(data, ~ cor(.x$STAR, .x$HISAT2)),
+           data=map2(data, 
+                     star.hisat.corr,
+                     ~ mutate(.x, Rsquared=c(.y, rep("", nrow(.x)-1))))) %>%
 
-# Explore the cleaned data frame
-lfcTable.comp
-lfcTable.comp$data
-
-# Prep vectors storing the correlation coefficient without duplication by comparison
-Rsquared.star.hisat <- plotlabels.fn(lfcTable.comp$star.hisat.corr,
-                            lfcTable.comp$data, 
-                            nrow(lfcTable.comp))
-
-# Unnest the data frame and add columns storing correlation coefficients each
-lfcTable.comp <- lfcTable.comp %>% 
+    # Unnest
     unnest(data) 
 
-head(lfcTable.comp)
-
-# Add a column storing R-squared between STAR and HISAT2
-lfcTable.comp$Rsquared.star.hisat <- Rsquared.star.hisat
-
-# Explore the data frame
+# Explore the cleaned data frame
 head(lfcTable.comp)
 
 
-# Nest the data frame by Metric 
-lfcTable.comp <- lfcTable.comp %>% 
-    group_by(Metric) %>%
-    nest()
-
-# Explore the data frame
-lfcTable.comp 
-lfcTable.comp$data
-
-# Set a function creating a scatter plot
-comp.scatter.fn <- function(df, 
-                            xvar, 
-                            yvar, 
-                            label, 
-                            metric,
-                            xlab, ylab,
-                            xlog=F,
-                            ylog=F) {
-
-    p <- ggplot(df, aes(x=xvar, y=yvar, color=log(num.trans), label=label)) + 
-        geom_point(alpha=0.5) + 
-        theme_bw() + 
-        geom_text(size=5, 
-                  mapping=aes(x=Inf, y=Inf), 
-                  vjust=2, hjust=1.2, color="black") +
-        geom_abline(slope=1, size=0.5, linetype="dashed", color="black") + 
-        ggtitle(paste("Comparison in", metric, "\n(with R-Squared)")) + scale_color_gradient(low="blue", high="red") +
-        xlab(xlab) + 
-        ylab(ylab)
-
-if (xlog) {
-
-    p <- p + 
-        scale_x_log10() 
-}
-
-if (ylog) { 
-
-    p <- p + scale_y_log10()
-
-}
-
-return(p)
-}
+# Create scatter plots comparing HISAT2 and STAR alignment results
+ggplot(lfcTable.comp,
+       aes(x=HISAT2, 
+           y=STAR, 
+           color=log(Alternative.Transcripts), 
+           label=Rsquared)) + 
+geom_point(alpha=0.5) + 
+theme_bw() + 
+facet_wrap(~ Metric, scales="free") + 
+theme(strip.text.x=element_text(size=10)) +
+geom_text(size=5, 
+          mapping=aes(x=Inf, y=Inf), 
+          vjust=2, hjust=1.2, color="black") +
+geom_abline(slope=1, size=0.5, linetype="dashed", color="black") + 
+ggtitle("HISAT2 vs STAR comparison (with R-Squared)") + scale_color_gradient(low="blue", high="red") 
 
 ```
 
 
-```{r comparison_plot, fig.width=12, fig.height=6}
+## Distribution of baseMean/log2FoldChange/padj between HISAT2 and STAR 
 
-
-# Create and add the scatter plots with or without logarithmic transformation of 
-# x/y scales 
-lfcTable.comp <- lfcTable.comp %>%
-
-    # Add scatter plots to the data frame:
-    #
-    # without log transformation of x and y scales
-    mutate(star.hisat=map(data, ~ comp.scatter.fn(.x, 
-                                                  .x$STAR, 
-                                                  .x$HISAT2, 
-                                                  .x$Rsquared.star.hisat,
-                                                  Metric,
-                                                  "STAR", "HISAT2")),
-
-           # with log transformation of x and y scales 
-           star.hisat.log=map(data, ~ comp.scatter.fn(.x, 
-                                                      .x$STAR, 
-                                                      .x$HISAT2, 
-                                                      .x$Rsquared.star.hisat,
-                                                      Metric, 
-                                                      "STAR", "HISAT2",
-                                                      T, T)))
+#### - P-Values: determines whether distribution of the values is different with statistical significance using Two-tailed t-test
 
 
 
-
-# Print the plots
-for (i in 1:length(my.param)) {
-
-    p1 <- lfcTable.comp$star.hisat[[i]] 
-
-
-    p2 <- lfcTable.comp$star.hisat.log[[i]]
-
-    print(grid.arrange(p1, p2, nrow=1)) 
-
-}
-
-
-
-
-
-```
-
-
-
-## Relationship between baseMean/log2FoldChange/padj with the number of alternative transcripts 
-
-#### - Variables of interest: baseMean, log2FoldChange, and padj 
-
-#### - R-squared: tests whether the two variables are correlated
-
-#### - None of the variable were correlated with the number of alternative transcripts in any of the aligners 
-
-
-
-```{r rel_with_ntrans}
-
-
-# Slice the data frame 
-lfcTable.rel <- lfcTable %>%
-    dplyr::select(starts_with(c(my.param, "num.")))
-
-# Set a function cleaning my data frame
-gather.fn <- function(word) {
-
-    gather(lfcTable.rel, Group, Value, starts_with(word)) %>%
-        dplyr::select(Group, Value, num.trans)
-}
-
-# Set a function creating a boxplot
-boxplot1.fn <- function(metric, ylog=F) {
-
-    df <- subset(lfcTable.rela, Metric == metric)
-
-    df$Aligner <- factor(df$Aligner, levels=Aligners)
-
-    p <- ggplot(df, 
-                aes(x= Aligner, y=Value, fill=Aligner, label=TT.label)) + 
-               geom_boxplot(alpha=0.5) + 
-               theme_bw() + 
-               xlab("Aligner") + 
-               ylab("Value") + 
-               theme(strip.text.x=element_text(size=10)) +
-               ggtitle(paste("Aligner Comparison in", 
-                             metric,
-                             "\n(P-value from Two-Tailed T-Test)")) + ylab(metric) + 
-               geom_text(size=5, mapping=aes(x=Inf, y=Inf), vjust=2, hjust=1.2)
-
-if (ylog) {
-
-    p <- p + scale_y_log10()
-
-}
-
-return(p) 
-}
-
-
+```{r distribution, fig.height=12, fig.width=12}
 
 
 # Clean the data frame 
-lfcTable.rela <- rbind(gather.fn("base"), 
-                       gather.fn("log2"), 
-                       gather.fn("padj")) %>%
+lfcTable.rel <- lfcTable %>%
+    dplyr::select(starts_with(c(my.param, "GENEID"))) %>% 
+    gather(Key, Value, -GENEID) %>% 
+    separate(Key, c("Metric", "Aligner"), sep="_") %>% 
+    group_by(Metric) %>%
+    nest() %>%
+    mutate(ttest=map_dbl(data, ~ t.test(.x$Value ~ .x$Aligner, data=.x)$p.value),
+           data=map2(data, 
+                     ttest, 
+                     ~ mutate(.x, Pval=c(.y, rep("", nrow(.x)-1))))) %>% 
+    unnest(data) %>%
+    mutate(Log.Value=log(Value)) %>% 
+    gather(Transformation, Value, Value, Log.Value) %>% 
+    mutate(Transformation=ifelse(Transformation == "Value",
+                                 "Original", 
+                                 "Log-Transformed"),
+           Transformation=factor(Transformation, 
+                                 levels=c("Original", "Log-Transformed")))
 
-separate(Group, c("Metric", "Aligner"), sep="_") %>%
-
-# Nest by Metric
-group_by(Metric) %>%
-nest() %>%
-
-# Add columns storing: 
-# 1. linear regression model 
-# 2. summary of the model 
-# 3. R-squared extracted from the model 
-# 4. t-test 
-# 5. p-values extracted from the t-test objects
-mutate(Model=map(data, ~ lm(Value ~ num.trans, data=.x)), 
-       Model_Summary=map(Model, ~ summary(.x)),
-       Rsquared=map_dbl(Model_Summary, ~ .x$r.squared), 
-       TT=map_dbl(data, ~ t.test(Value ~ Aligner, data=.x)$p.value))
-
-
-# Create a vector storing p-values which will be used in plotting
-ttest.label <- plotlabels.fn(lfcTable.rela$TT, 
-                            lfcTable.rela$data, 
-                            nrow(lfcTable.rela))
-# Unnest 
-lfcTable.rela <- lfcTable.rela %>% 
-    unnest(data) 
-
-# Add a column storing previously created p-value vector
-lfcTable.rela$TT.label <- ttest.label
+# Create boxplots presenting the distribution    
+ggplot(lfcTable.rel,
+       aes(x=Aligner,
+           y=Value, 
+           label=Pval)) +
+geom_jitter(alpha=0.5, aes(color=Aligner)) + 
+geom_boxplot(data=lfcTable.rel, 
+             alpha=0.5, outlier.alpha=0, aes(x=Aligner, y=Value)) + 
+theme_bw() + 
+facet_wrap(Transformation ~ Metric, scales="free") + 
+xlab("Aligner") + 
+ylab("Value") +
+geom_text(size=5, mapping=aes(x=Inf, y=Inf), vjust=2, hjust=1.2) + 
+theme(strip.text.x=element_text(size=10)) + 
+ggtitle("Distribution Comparison (with P-Value from Two-Tailed T-Test)") 
 
 
-# Plot 
-boxplot1.fn("baseMean", basemean.comparison.ylog) 
-boxplot1.fn("log2FoldChange", lfc.comparison.ylog) 
-boxplot1.fn("padj", padj.comparison.ylog)
+
+
 
 
 ```
 
 
-## Exploring relationship between difference/percent difference vs the number of alternative transcripts 
+## Exploring relationship between absolute difference/percent difference vs the number of alternative transcripts 
+
+#### - Absolute Difference: HISAT2 - STAR
+
+#### - Percent Difference: 100 x (abs(HISAT2 - STAR) / HISAT2 + STAR)
 
 
-
-```{r percent_difference, fig.width=12, fig.height=12}
+```{r percent_difference, fig.width=12}
 
 # Add columns storing percent difference
 lfcTable <- lfcTable %>%
@@ -1154,7 +1019,7 @@ lfcTable.percent <- data.frame()
 for (x in my.param) {
 
     
-    init.vec <- c("GENEID", "num.trans")
+    init.vec <- c("GENEID", "Alternative.Transcripts")
 
     # Set columns of interest
     if (x == my.param[1]) { 
@@ -1176,8 +1041,8 @@ for (x in my.param) {
     # Trim the table 
     df <- lfcTable[, colnames(lfcTable) %in% col.of.interest] %>%
         mutate(Metric=x) %>%
-        dplyr::rename(Difference=ends_with("HI"), 
-                      Percent=ends_with("percent")) 
+        dplyr::rename(Absolute.Difference=ends_with("HI"), 
+                      Percent.Difference=ends_with("percent"))    
 
     # Save in the empty data frame 
     if (x == my.param[1]) {
@@ -1210,139 +1075,38 @@ head(lfcTable.percent$data[[1]])
 
 # Calculate correlation (Rsquared) 
 # DvsP: Percent Difference vs Difference
-# DvsT: Difference vs Number of Transcripts
-# PvsT: Percent Difference vs Number of Transcripts
 lfcTable.percent <- lfcTable.percent %>%
-    mutate(DvsP.mod=map(data, ~ lm(Percent ~ Difference, data=.x)), 
-           DvsP.rsq=map_dbl(DvsP.mod, ~ summary(.x)$r.squared),
-           DvsT.mod=map(data, ~ lm(Difference ~ num.trans, data=.x)),
-           DvsT.rsq=map_dbl(DvsT.mod, ~ summary(.x)$r.squared), 
-           PvsT.mod=map(data, ~ lm(Percent ~ num.trans, data=.x)), 
-           PvsT.rsq=map_dbl(PvsT.mod, ~ summary(.x)$r.squared))
+    mutate(Mod=map(data, ~ lm(Percent.Difference ~ Absolute.Difference, data=.x)),
+           rsq=map_dbl(Mod, ~ summary(.x)$r.squared),
+           data=map2(data, 
+                     rsq, 
+                     ~ mutate(.x, 
+                                Rsquared=c(.y, rep("", nrow(.x)-1))))) %>%
 
-# Add Rsquard values to the data frame as plot label columns
-DvsP.r <- plotlabels.fn(lfcTable.percent$DvsP.rsq, 
-                        lfcTable.percent$data, 
-                        nrow(lfcTable.percent))
+    unnest(data)
 
-DvsT.r <- plotlabels.fn(lfcTable.percent$DvsT.rsq, 
-                        lfcTable.percent$data, 
-                        nrow(lfcTable.percent))
-
-PvsT.r <- plotlabels.fn(lfcTable.percent$PvsT.rsq, 
-                        lfcTable.percent$data, 
-                        nrow(lfcTable.percent))
-
-lfcTable.percent <- lfcTable.percent %>%
-    unnest(data) 
-
-lfcTable.percent$DvsP.Rsquared <- DvsP.r 
-lfcTable.percent$DvsT.Rsquared <- DvsT.r
-lfcTable.percent$PvsT.Rsquared <- PvsT.r
 
 
 # Explore the output data frame
 head(lfcTable.percent)
 
-# Set a function creating scatter plot
-scatter2.fn <- function(label.col, xtitle, ytitle, title, ylog=F, xlog=F, label=F) { 
-
-    p <- ggplot(lfcTable.percent) + 
+# Print the plots
+ggplot(lfcTable.percent, 
+       aes(x=abs(Absolute.Difference),
+           y=abs(Percent.Difference),
+           color=log(Alternative.Transcripts),
+           label=Rsquared)) + 
+    geom_point(alpha=0.5) + 
     theme_bw() + 
     scale_color_gradient(low="blue", high="red") + 
     facet_wrap(~Metric, scales = "free") + 
     theme(strip.text.x=element_text(size=10)) + 
-    ggtitle(paste(title, "in HISAT2 vs STAR")) + 
-    xlab(xtitle) + 
-    ylab(ytitle)
-
-    if (ylog) {
-
-        p <- p + scale_y_log10() + ylab(paste0("Log (", ytitle, ")")) 
-
-    } 
-
-    if (xlog) { 
-
-        p <- p + scale_x_log10() + xlab(paste0("Log (", xtitle, ")")) 
-
-
-    }
-
-
-    if (label) {
-
-
-    p <- p + geom_text(data=lfcTable.percent, 
-              size=5, 
-              mapping=aes(label=label.col, x=Inf, y=Inf), 
-              vjust=2, hjust=1.1, color="black") + 
-    ggtitle(paste(title, "in HISAT2 vs STAR", "(with R-Squared)"))
-    }
-
-
-
-    return(p)
-}
-
-
-# Create and save the plots
-# P1 & 2: D vs P with or without log transformation of x values
-# P3 & 4: P vs T with or without log transformation of y values
-# P5 & 6: D vs T with or without log transformation of y values
-p1 <- scatter2.fn(lfcTable.percent$DvsP.Rsquared, 
-                  "HISAT2 - STAR", 
-                  "100 x (HISAT2 - STAR) / (HISAT2 + STAR)", 
-                  "Difference vs Percent Difference", label=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=abs(Difference), y=abs(Percent), color=log(num.trans)))
-
-p2 <- scatter2.fn(lfcTable.percent$DvsP.Rsquared, 
-                  "HISAT2 - STAR", 
-                  "100 x (HISAT2 - STAR) / (HISAT2 + STAR)", 
-                  "Difference vs Percent Difference", 
-            xlog=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=abs(Difference), y=abs(Percent), color=log(num.trans)))
-
-
-p3 <- scatter2.fn(lfcTable.percent$PvsT.Rsquared, 
-            "Number of Alternative Transcripts", 
-            "100 x (HISAT2 - STAR) / (HISAT2 + STAR)", 
-            "Percent Difference vs Number of Alternative Transcripts",
-            label=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=num.trans, y=abs(Percent)))
-
-p4 <- scatter2.fn(lfcTable.percent$PvsT.Rsquared, 
-            "Number of Alternative Transcripts", 
-            "100 x (HISAT2 - STAR) / (HISAT2 + STAR)", 
-            "Percent Difference vs Number of Alternative Transcripts",
-            ylog=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=num.trans, y=abs(Percent)))
-
-p5 <- scatter2.fn(lfcTable.percent$DvsT.Rsquared, 
-            "Number of Alternative Transcripts", 
-            "HISAT2 - STAR", 
-            "Difference vs Number of Alternative Transcripts", 
-            label=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=num.trans, y=abs(Difference)))
-
-p6 <- scatter2.fn(lfcTable.percent$DvsT.Rsquared, 
-            "Number of Alternative Transcripts", 
-            "HISAT2 - STAR",
-            "Difference vs Number of Alternative Transcripts",
-            ylog=T) + 
-    geom_point(data=lfcTable.percent, alpha=0.5,
-               aes(x=num.trans, y=abs(Difference)))
-
-
-# Print the plots
-grid.arrange(p1, p2, ncol=1)
-grid.arrange(p3, p4, ncol=1)
-grid.arrange(p5, p6, ncol=1)
+    geom_text(size=5, 
+              aes(x=Inf, y=Inf), 
+              vjust=2, hjust=1.1, color="black") +
+    ggtitle("Discordance between HISAT2 and STAR") + 
+    xlab("Absolute Difference\n(HISAT2 - STAR)") + 
+    ylab("Percent Difference\n(100 x (HISAT2 - STAR) / (HISAT2 + STAR))")
 
 
 
@@ -1350,7 +1114,7 @@ grid.arrange(p5, p6, ncol=1)
 ```
 
 
-## Comparison of Ranking between Salmon and STAR in baseMean/log2FoldChange/FDR
+## Comparison of Ranking between HISAT2 and STAR in baseMean/log2FoldChange/FDR
 
 
 
@@ -1399,8 +1163,8 @@ rank.plot.fn <- function(df, metric, colog=F) {
         geom_point(alpha=0.5) + 
         theme_bw() + 
         scale_color_gradient(low="blue", high="red") + 
-        xlab("HISAT2") + 
-        ylab("STAR") + 
+        xlab("Rank in HISAT2") + 
+        ylab("Rank in STAR") + 
         ggtitle(paste("Rank Comparison in", metric, "\n(with R-Squared)")) + geom_text(size=5, 
                 mapping=aes(x=Inf, y=Inf), vjust=2, hjust=1, color="black") +
         geom_abline(slope=1, size=0.5, linetype="dashed", color="black")  
@@ -1473,54 +1237,31 @@ lfcTable.rank <- lfcTable %>%
     nest(-Metric) %>%
 
     # Add a column storing R^2
-    mutate(Rsquared=map_dbl(data, ~ cor(.x$Rank.x, .x$Rank.y)))
+    mutate(rsq=map_dbl(data, ~ cor(.x$Rank.x, .x$Rank.y)),
+           data=map2(data, 
+                     rsq, 
+                     ~ mutate(.x, 
+                              Rsquared=c(.y, 
+                                         rep("", nrow(.x)-1))))) %>%
 
-# Explore the data frame 
-head(lfcTable.rank)
-head(lfcTable.rank$data)
-
-
-
-# Create a vector storing R^2 values as an input of ggplot2() 
-Rsquared <- plotlabels.fn(lfcTable.rank$Rsquared, 
-                          lfcTable.rank$data, 
-                          nrow(lfcTable.rank))
-
-# Unnest and add a column storing ggplot2's input R^2
-lfcTable.rank <- lfcTable.rank %>%
-    unnest(data) 
-
-lfcTable.rank$Rsquared <- Rsquared
-
-
-# Check out the new column added
-head(lfcTable.rank)
-
-# Clean the data frame
-lfcTable.rank <- lfcTable.rank %>%
-
-    # Nest by metric
-    group_by(Metric) %>%
-    nest() %>%
 
     # Add columns storing scatter plots
     mutate(RankPlot=map(data, ~ rank.plot.fn(.x, Metric)), 
            RankPlot.log=map(data, ~ rank.plot.fn(.x, Metric, T)))
 
 
-# Set a function simplifying grid.arrange() 
-gr.ar.fn1 <- function(pl1, pl2) {
+# Explore the data frame 
+head(lfcTable.rank)
+head(lfcTable.rank$data[[2]])
 
-    grid.arrange(pl1, pl2, nrow=1)
-
-}
 
 
 # Explore the plots
 for (i in 1:3) {
 
-    print(gr.ar.fn1(lfcTable.rank$RankPlot[[i]], 
-          lfcTable.rank$RankPlot.log[[i]]))
+    print(grid.arrange(lfcTable.rank$RankPlot[[i]],
+                       lfcTable.rank$RankPlot.log[[i]], nrow=1))
+
 
 }
 
@@ -1544,6 +1285,7 @@ grid.arrange(lfcTable.rank$RankPlot.log[[1]],
 
 ```{r saving_diff_csv}
 
+# Create an empty data frame for storing cleaned discordance table
 lfcTable.discordance <- data.frame()
 
 
@@ -1554,7 +1296,7 @@ for (x in my.param) {
 
 
     # Rearrange the data frame using the function rank.fn() set previously
-    df <- rank.fn(df, abs(df$Percent), desc=T) 
+    df <- rank.fn(df, abs(df$Percent.Difference), desc=T) 
 
     # Save the output in the lfcTable.discordance data frame by rbinding
     lfcTable.discordance <- rbind(lfcTable.discordance, 
@@ -1579,6 +1321,24 @@ head(lfcTable.discordance)
 dim(lfcTable.discordance)
 glimpse(lfcTable.discordance)
 
+# Assign a new vector storing discordance group
+discordance.group <- c(rep("High % Difference", num.dis.genes), 
+                       rep("Low % Difference", num.dis.genes))
+
+# Clean the data frame keeping only 100 top- and 100 bottom-percent difference genes 
+lfcTable.discordance <- lfcTable.discordance %>%
+    group_by(Metric) %>%
+    nest() %>%
+    mutate(Sampled=map(data, ~ rbind(head(.x, num.dis.genes), tail(.x, num.dis.genes))),
+           Sampled=map(Sampled, ~ mutate(.x, Discordance=discordance.group))) %>%
+    dplyr::select(-data) %>%
+    unnest(Sampled)
+
+
+# Explore the output data frame
+head(lfcTable.discordance)
+dim(lfcTable.discordance)
+glimpse(lfcTable.discordance)
 ```
 
 
@@ -1652,7 +1412,7 @@ for (i in 7:length(trflines)) {
 trfTable <- trfTable %>%
     mutate(code=ifelse(grepl(geneid.species, Line, fixed=T), 
                        "ID", 
-                       "CDNA")) 
+                       "DNA")) 
 
 
 
@@ -1667,25 +1427,25 @@ GENE <- c()
 COUNT <- c()
 
 index.id <- 0
-index.cdna <- 0
+index.dna <- 0
 for (i in 1:nrow(trfTable)) {
 
 
     if (code.vector[i] == "ID") {
 
         index.id <- index.id + 1
-        index.cdna <- 0
+        index.dna <- 0
 
     } else {
 
         index.id <- 0
-        index.cdna <- index.cdna + 1
+        index.dna <- index.dna + 1
     }
 
 
 
     GENE[i] <- index.id # Indicates GENEID coded "ID"
-    COUNT[i] <- index.cdna  # Indicates repetitive elements coded "CDNA" 
+    COUNT[i] <- index.dna  # Indicates repetitive elements coded "DNA" 
 
 
 }
@@ -1722,22 +1482,29 @@ repetitive.geneid
 repetitive.first
 repetitive.last
 
+# Save the repetitive elements counted as a data frame
 trfnumTable <- data.frame(GENEID=trfTable$Line[repetitive.geneid],
                           Repeats_First=repetitive.first, 
                           Repeats_Last=repetitive.last) %>% 
-mutate(Repetitive.Elements=Repeats_Last - Repeats_First + 1)
+mutate(Repetitive.Elements=Repeats_Last - Repeats_First + 1) %>%
+dplyr::select(GENEID, Repetitive.Elements)
 
 
 # Join the TRF result with the discordance data frame
 lfcTable.discordance <- lfcTable.discordance %>%
-    inner_join(trfnumTable, by="GENEID") 
+    left_join(trfnumTable, by="GENEID") %>%
+    mutate(Repetitive.Elements=ifelse(is.na(Repetitive.Elements), 
+                                      0, 
+                                      Repetitive.Elements))
+
 
 # Remove duplicated rows
 lfcTable.discordance <- lfcTable.discordance[!duplicated(lfcTable.discordance),]
 
 # Explore the output data frame
 glimpse(lfcTable.discordance)
-
+dim(lfcTable.discordance)
+head(lfcTable.discordance)
 
 
 ```
@@ -1797,6 +1564,7 @@ lfcTable.discordance <- lfcTable.discordance %>%
 # Explore the combined data frame
 head(lfcTable.discordance)
 glimpse(lfcTable.discordance)
+dim(lfcTable.discordance)
 
 
 
@@ -1804,19 +1572,16 @@ glimpse(lfcTable.discordance)
 ```
 
 
-## Investigating relationship between genomic variability and alignment difference
+## Investigating relationship between alignment discordance and the number of alternative transcripts/variant alleles/repetitive elements
 
 
 ```{r clean_plot_data, fig.height=12, fig.width=12}
 
 # Clean the data frame
 lfcTable.summary <- lfcTable.discordance %>%
-    group_by(Metric, GENEID) %>%
-    summarize(Percent.Difference=abs(Percent),
-              Absolute.Difference=abs(Difference),
-              Alternative.Transcripts=num.trans,
-              Variant.Alleles=Variant.Alleles,
-              Repetitive.Elements=Repetitive.Elements) 
+    mutate(Percent.Difference=abs(Percent.Difference), 
+           Absolute.Difference=abs(Absolute.Difference))
+
 
 # Remove duplicated rows 
 lfcTable.summary <- lfcTable.summary[!duplicated(lfcTable.summary),]
@@ -1828,63 +1593,81 @@ glimpse(lfcTable.summary)
 
 
 # Clean and nest the data frame
-lfcTable.nested <- lfcTable.summary %>%
-    gather(Difference, 
-           Difference.Value, 
-           Percent.Difference, 
-           Absolute.Difference) %>% 
+lfcTable.summary <- lfcTable.summary %>%
     gather(Variable, 
-           Variable.Value, 
-           Alternative.Transcripts,
-           Variant.Alleles,
-           Repetitive.Elements) %>%
-    group_by(Metric, Variable, Difference) %>%
+           Value, 
+           Absolute.Difference, 
+           Alternative.Transcripts, 
+           Repetitive.Elements,
+           Variant.Alleles) %>% 
+    group_by(Metric, Variable) %>%
     nest() %>%
 
-    # Create linear regression models & calculate p-values
-    mutate(Mod=map(data, ~ lm(.x$Difference.Value ~ 
-                                  .x$Variable.Value, data=.x)),
-           R.Squared=map_dbl(Mod, ~ summary(.x)$r.squared),
+    # Calculate p-values using two-tailed t-test and clean the data frame
+    mutate(ttest=map(data, ~ t.test(Percent.Difference ~ Discordance, 
+                                    data=.x)$p.value),
            data=map2(data, 
-                     R.Squared,
-                     ~ mutate(.x, rsq=c(.y, rep("", nrow(.x)-1))))) %>%
-
-    dplyr::select(-Mod, -R.Squared) %>%
-    unnest(data) %>%
+                     ttest,
+                     ~ mutate(.x, P.Value=c(.y, rep("", nrow(.x)-1))))) %>%
+    dplyr::select(-ttest) %>%
+    unnest(data) %>% 
+    spread(Variable, Value) %>% 
+    gather(Variable, Value, -Metric, -GENEID, -Discordance, -P.Value) %>%
     group_by(Metric) %>%
     nest()
 
+# Display the difference plot in baseMean, log2FoldChange, and padj
+for (i in 1:nrow(lfcTable.summary)) {
 
-# Explore the output
-head(lfcTable.nested)
-head(lfcTable.nested$data[[1]])
+    df <- lfcTable.summary$data[[i]]
+    metric <- lfcTable.summary$Metric[i]
+
+    df$Variable <- factor(df$Variable,
+                          levels=c("Percent.Difference", 
+                                   "Absolute.Difference", 
+                                   "Alternative.Transcripts", 
+                                   "Repetitive.Elements", 
+                                   "Variant.Alleles"))
+
+    # without log transformation of y-scale
+    p1 <- ggplot(df,
+               aes(x=Discordance,
+                   y=Value, 
+                   label= P.Value)) +
+        geom_jitter(alpha=0.5, aes(color=Discordance)) + 
+        geom_boxplot(alpha=0.5, outlier.alpha=0) + 
+        theme_bw() + 
+        facet_wrap(~ Variable, scales="free") + 
+        theme(strip.text=element_text(size=11), 
+              axis.text=element_text(size=10)) + 
+        geom_text(size=5, 
+                  mapping=aes(x=Inf, y=Inf), 
+                  vjust=2, hjust=1.1, color="black") + 
+        ggtitle(paste("Comparison between High vs Low Difference Genes in",
+                      metric,
+                      "\n(with P-Values from Two-Tailed T-Test)"))
+
+    # with log transformation of y-scale
+    p2 <- p1 + 
+        scale_y_log10() + 
+        ggtitle(paste("Comparison between High vs Low Difference Genes in",
+                      metric,
+                      "\n(with P-Values from Two-Tailed T-Test and Log-Transformed Y-Scale)"))
+
+    print(p1)
+    print(p2)
 
 
-for (i in 1:nrow(lfcTable.nested)) {
-
-    df <- lfcTable.nested$data[[i]]
-
-    metric <- lfcTable.nested$Metric[i]
-
-    # Create scatter plots presenting alignment discordance vs Variable
-    p <- ggplot(df,
-           aes(x=Variable.Value,
-               y=Difference.Value,
-               label=rsq)) + 
-    geom_point(alpha=0.5) + 
-    theme_bw() + 
-    facet_grid(Difference ~ Variable, scales="free") + 
-    theme(strip.text=element_text(size=11), 
-          axis.text=element_text(size=10)) + 
-    xlab("Variables") + 
-    ylab("Discordance between HISAT2 and STAR") + 
-    ggtitle(paste("Correlation between Variables and Alignment Discordance in", 
-                  metric, "\n(with R-Squared)")) + 
-    geom_text(size=5, mapping=aes(x=Inf, y=Inf), vjust=2, hjust=1.1, color="black") 
-
-    print(p)
 
 }
+
+
+
+
+# Explore the output
+head(lfcTable.summary)
+dim(lfcTable.summary)
+glimpse(lfcTable.summary)
 
 
 
@@ -1892,7 +1675,7 @@ for (i in 1:nrow(lfcTable.nested)) {
 ```
 
 
-## Summarizing up/down DEGs with an upset plot
+## Summarizing up/down-regulated DEGs using an upset plot
 
 #### - The upset plot is designed to display intersecting DEG sets  
 
