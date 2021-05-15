@@ -22,6 +22,7 @@ END:
 
 
 ###################### Reference info ########################
+
 REFERENCE:
   - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
   - 'GRCh38.primary_assembly.genome.fa'
@@ -41,10 +42,13 @@ INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files 
 
 FASTQ_EXT: '.fastq.gz'
 
-RCONFIG: 'config/config_single.R'
+
 
 CONDA: "config/conda_r.yaml"
   
+  
+  
+RCONFIG: 'config/config_single.R'
 
 
 

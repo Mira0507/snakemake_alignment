@@ -43,6 +43,7 @@ RCONFIG: 'config/config_single.R'
 
 CONDA: "config/conda_r.yaml"
   
+RCONFIG: "config/config_paired.R"
 
 
 
