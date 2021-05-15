@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired.yaml"    # Sets path to the config file
+configfile: "config/config_paired1.yaml"    # Sets path to the config file
 #######################################################################################
 
 shell.prefix('set -euo pipefail; ')
@@ -28,7 +28,7 @@ rule get_fastq:
         dic=config['SAMPLE']
     run:
         sra=params.dic[wildcards.sample]
-        shell("fastq-dump --split-files {sra} --gzip -X 100000")   # -X is for testing
+        shell("fastq-dump --split-files {sra} --gzip")   # -X is for testing
         for i in range(len(output)):
             i += 1
             shell("mv {sra}_{i}.fastq.gz fastq/{wildcards.sample}_{i}.fastq.gz")
