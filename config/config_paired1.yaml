@@ -1,0 +1,62 @@
+
+###################### Sample info ######################
+
+SAMPLE:
+  SRR6461133: Treated_rep1
+  SRR6461134: Treated_rep2
+  SRR6461135: Treated_rep3
+  SRR6461139: Control_rep1
+  SRR6461140: Control_rep2
+  SRR6461141: Control_rep3
+
+
+
+END: 
+  - 1
+  - 2
+
+
+SRA:
+  - SRR6461133
+  - SRR6461134
+  - SRR6461135
+  - SRR6461139
+  - SRR6461140
+  - SRR6461141
+  
+
+FASTQ_PREFIX:
+  - Treated_rep1
+  - Treated_rep2
+  - Treated_rep3
+  - Control_rep1
+  - Control_rep2
+  - Control_rep3
+
+
+###################### Reference info ######################
+  
+REFERENCE_LINK:
+  GENOME: 
+    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/GRCh38.primary_assembly.genome.fa.gz'
+    - 'GRCh38.primary_assembly.genome.fa.gz'
+    - 'GRCh38.primary_assembly.genome.fa'
+  ANNOTATION: 
+    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz'
+    - 'gencode.v37.primary_assembly.annotation.gtf.gz'
+    - 'gencode.v37.primary_assembly.annotation.gtf'
+
+
+###################### Extra-setting info ######################
+
+INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
+
+INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files (e.g.reference/hisat2_index/hisat2_index.1.ht2, reference/hisat2_index/hisat2_index.2.ht2, ...)
+
+
+FASTQ_EXT: '.fastq.gz'
+
+CONDA: "config/conda_r.yaml"
+
+RCONFIG: 'config/config_paired1.R'
+  

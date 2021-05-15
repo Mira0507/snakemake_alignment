@@ -1,16 +1,15 @@
 
 ###################### Sample info ######################
 
+
+
 SAMPLE:
-  SRR8245176: Untreated1
-  SRR8245177: Untreated2
-  SRR8245178: Untreated3
-  SRR8245179: Treated1
-  SRR8245180: Treated2
-  SRR8245181: Treated3
-  
-
-
+  Untreated1: SRR8245176
+  Untreated2: SRR8245177
+  Untreated3: SRR8245178
+  Treated1: SRR8245179
+  Treated2: SRR8245180
+  Treated3: SRR8245181
 
 
 END: 
@@ -18,37 +17,17 @@ END:
   - 2
 
 
-SRA:
-  - SRR8245176
-  - SRR8245177
-  - SRR8245178
-  - SRR8245179
-  - SRR8245180
-  - SRR8245181
+
+
+###################### Reference info ########################
+REFERENCE:
+  - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
+  - 'GRCh38.primary_assembly.genome.fa'
+  - 'gencode.v37.primary_assembly.annotation.gtf'
   
-
-FASTQ_PREFIX:
-  - Untreated1
-  - Untreated2
-  - Untreated3
-  - Treated1
-  - Treated2
-  - Treated3
-  
-
-
-###################### Reference info ######################
-  
-REFERENCE_LINK:
-  GENOME: 
-    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/GRCh38.primary_assembly.genome.fa.gz'
-    - 'GRCh38.primary_assembly.genome.fa.gz'
-    - 'GRCh38.primary_assembly.genome.fa'
-  ANNOTATION: 
-    - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz'
-    - 'gencode.v37.primary_assembly.annotation.gtf.gz'
-    - 'gencode.v37.primary_assembly.annotation.gtf'
-
+# e.g. 
+# Reference genome link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/GRCh38.primary_assembly.genome.fa.gz
+# Reference annotation (GTF) link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz 
 
 ###################### Extra-setting info ######################
 
@@ -57,9 +36,14 @@ INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisa
 INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files (e.g.reference/hisat2_index/hisat2_index.1.ht2, reference/hisat2_index/hisat2_index.2.ht2, ...)
 
 
+
 FASTQ_EXT: '.fastq.gz'
 
-CONDA: "config/conda_r.yaml"
-
 RCONFIG: 'config/config_single.R'
+
+CONDA: "config/conda_r.yaml"
   
+
+
+
+
