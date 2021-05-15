@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_single.yaml"    # Sets path to the config file
+configfile: "config/config_paired.yaml"    # Sets path to the config file
 #######################################################################################
 
 shell.prefix('set -euo pipefail; ')
@@ -10,11 +10,11 @@ shell.executable('/bin/bash')
 
 rule all: 
     input: 
-        expand("fastq/{sample}_{end}.fastq.gz", sample=list(config['SAMPLE'].keys()), end=config['END']), # FASTQ files
         expand("reference/{ref}", ref=config['REFERENCE'][1:]),  # Reference genome and annotation (GTF) files
         expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # HISAT2 output BAM files
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys()))   # STAR output BAM files
-
+        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),  # STAR output BAM files
+        "star_output/featurecounts.tsv",
+        "hisat2_output/featurecounts.tsv"
 
 
 
@@ -57,7 +57,7 @@ rule index_hisat2:
         expand("reference/{gen}", gen=config['REFERENCE'][1])    # Decompressed reference genome file
     output:
         expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])   # HISAT2 indexing files
-    threads: 8
+    threads: 16
     shell:
         "set +o pipefail; "
         "hisat2-build -f -o 4 "
@@ -79,7 +79,7 @@ rule index_star:
         "reference/star_index/Genome",   # STAR indexing files
         "reference/star_index/SA",       # STAR indexing files
         "reference/star_index/SAindex"   # STAR indexing files
-    threads: 8
+    threads: 16
     shell:
         "set +o pipefail; "
         "STAR --runThreadN {threads} "
@@ -100,15 +100,14 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
         temp("hisat2_output/{sample}.sam"),
         "hisat2_output/{sample}.bam"    # Bam files
     params:
-        read=config["END"],  # e.g. [1] for single-end, [1, 2] for paired-end
         ext=config['FASTQ_EXT'],       # extension of the FASTQ files (e.g. .fastq.gz)
         indexing=config['INDEX_HISAT'] # HISAT2 indexing location and file name prefix
-    threads: 8
+    threads: 16
     run:
         r1="fastq/" + wildcards.sample + "_1" + params.ext
         r2=""
         read="-U " + r1
-        if len(params.read) == 2: 
+        if len(input.fastq) == 2:    # if paired-end
             r2= "fastq/" + wildcards.sample + "_2" + params.ext  
             read="-1 " + r1 + " -2 " + r2
         shell("hisat2 -q -p {threads} "
@@ -130,40 +129,77 @@ rule align_star:   # Creates bam files in star_output directory"
     input:
         gtf=expand("reference/{anno}", anno=config['REFERENCE'][2]),   # Decompressed GTF file
         fastq=expand("fastq/{{sample}}_{end}.fastq.gz", end=config['END']),    # Gzipped FASTQ files
-        index1="reference/star_index/Genome",
+        index1="reference/star_index/Genome",  # STAR indexing files
         index2="reference/star_index/SA",
         index3="reference/star_index/SAindex"
     output:
         "star_output/{sample}Aligned.sortedByCoord.out.bam"     # Bam files
     params:
-        read=config["END"],  # e.g. [1] for single-end, [1, 2] for paired-end
         indexing=config["INDEX_STAR"],  # STAR indexing file directory
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
-    threads: 8
+    threads: 16
     run:
         r1= "fastq/" + wildcards.sample + "_1" + params.ext + " " 
         r2=""
-        if len(params.read) == 2: 
+        if len(input.fastq) == 2:   # if paired-end
             r2= "fastq/" + wildcards.sample + "_2" + params.ext + " " 
-            shell("STAR --runThreadN {threads} "  
-                    "--runMode alignReads "  
-                    "--readFilesCommand zcat "
-                    "--genomeDir {params.indexing} " 
-                    "--sjdbGTFfile {input.gtf} "  
-                    "--sjdbOverhang 100 "  
-                    "--readFilesIn {r1}{r2}"  
-                    "--outFileNamePrefix star_output/{wildcards.sample} "
-                    "--outFilterType BySJout "  
-                    "--outFilterMultimapNmax 20 "
-                    "--alignSJoverhangMin 8 "
-                    "--alignSJDBoverhangMin 1 "
-                    "--outFilterMismatchNmax 999 "
-                    "--outFilterMismatchNoverReadLmax 0.04 "
-                    "--alignIntronMin 20 "
-                    "--alignIntronMax 1000000 "
-                    "--outSAMunmapped None "
-                    "--outSAMtype BAM "
-                    "SortedByCoordinate "
-                    "--quantMode GeneCounts "
-                    "--twopassMode Basic "
-                    "--chimOutType Junctions")     
+        shell("STAR --runThreadN {threads} "  
+                "--runMode alignReads "  
+                "--readFilesCommand zcat "
+                "--genomeDir {params.indexing} " 
+                "--sjdbGTFfile {input.gtf} "  
+                "--sjdbOverhang 100 "  
+                "--readFilesIn {r1}{r2}"  
+                "--outFileNamePrefix star_output/{wildcards.sample} "
+                "--outFilterType BySJout "  
+                "--outFilterMultimapNmax 20 "
+                "--alignSJoverhangMin 8 "
+                "--alignSJDBoverhangMin 1 "
+                "--outFilterMismatchNmax 999 "
+                "--outFilterMismatchNoverReadLmax 0.04 "
+                "--alignIntronMin 20 "
+                "--alignIntronMax 1000000 "
+                "--outSAMunmapped None "
+                "--outSAMtype BAM "
+                "SortedByCoordinate "
+                "--quantMode GeneCounts "
+                "--twopassMode Basic "
+                "--chimOutType Junctions")   
+
+
+rule featurecounts:
+    """
+    This rule assesses read counts using featureCounts
+    """
+    input:
+        star=expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),   # Bam files from STAR
+        hisat2=expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),                               # Bam files from HISAT2
+        gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
+    params:
+        ends=config['END']   # Read ends (e.g. [1] or [1, 2])
+    output:
+        star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
+        hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
+    threads: 8
+    run:
+        r=""
+        if len(params.ends) == 2:   # if paired-end
+            r='-p'
+        # Additional featureCounts flags
+        # -F: format of the annotation file. 'GTF' by default.
+        # -g: attribute type. 'gene_id' by default. 
+        # -L: set for long-read inputs 
+        # -s: strand-specificity. 0 (unstranded & default), 1 (stranded), 2 (reversely stranded)
+        shell("set +o pipefail; "
+              "featureCounts {r} "    
+              "-s0 "
+              "-T {threads} "
+              "-a {input.gtf} "
+              "-o {output.star} "
+              "{input.star} &> {output.star}.log && "
+              "featureCounts {r} "    
+              "-s0 "
+              "-T {threads} "
+              "-a {input.gtf} "
+              "-o {output.hisat2} "
+              "{input.hisat2} &> {output.hisat2}.log")
