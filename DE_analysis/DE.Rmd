@@ -48,7 +48,7 @@ library(jsonlite)
 
 ```{r}
 
-source("../config/config_single.R")
+source("../config/config_paired.R")
 
 ```
 
@@ -1379,7 +1379,6 @@ for (i in 1:length(geneid)) {
     write(line1, file="trf_input.fa", append=T)
     write(line2, file="trf_input.fa", append=T)
 
-
 }
 
 
@@ -1413,9 +1412,6 @@ trfTable <- trfTable %>%
     mutate(code=ifelse(grepl(geneid.species, Line, fixed=T), 
                        "ID", 
                        "DNA")) 
-
-
-
 
 
 
@@ -1522,7 +1518,7 @@ head(lfcTable.discordance)
 
 
 # Create an empty vector storing the number of variant alleles per gene id 
-variants.vec <- c()
+var.df <- data.frame() 
 
 for (i in 1:length(geneid)) {
 
@@ -1538,28 +1534,50 @@ for (i in 1:length(geneid)) {
 
     # Extract the variant ids 
     df <- data.frame(t(sapply(content(r),c))) %>% 
-        gather("Variable", "Value") %>% 
-        dplyr::filter(str_detect(Value, "rs"))
+        gather("Variable", "Value") 
 
-    # Count the number of variant ids and save
-   variants.vec <- c(variants.vec, length(unique(df$Value)))
+    nvar <- 0
+
+    # If no variant is found:
+    if (ncol(df) != 0) {
+
+        # Save variant ids filtered as a data frame
+        df <- df %>% 
+            dplyr::filter(str_detect(Value, "rs")) %>% 
+            mutate(Value=unlist(Value)) 
+
+        # Create a vector storing unique variant ids
+        nvar <- length(unique(df$Value))
+
+
+    } 
+
+    # Create a data frame storing gene id and corresponding unique variant ids 
+    df.nvar <- data.frame(GENEID=geneid[i], 
+                          Variant.Alleles=nvar)
+
+    # Combine the data frames
+    var.df <- rbind(var.df, df.nvar)
+
 
 }
 
 
-# Save gene ids and the number of variant alleles as a data frame 
-var.df <- data.frame(GENEID=geneid, 
-                     Variant.Alleles=variants.vec)
 
 # Explore the output data frame
 head(var.df)
 dim(var.df)
+glimpse(var.df)
 
 
 # Combine the number of variant alleles to the percent discordance table 
 lfcTable.discordance <- lfcTable.discordance %>%
-    inner_join(var.df,
-               by="GENEID")
+    left_join(var.df,
+               by="GENEID") %>% 
+    mutate(Variant.Alleles=ifelse(is.na(Variant.Alleles), 
+                                  0, 
+                                  Variant.Alleles))
+
 
 # Explore the combined data frame
 head(lfcTable.discordance)
@@ -1596,6 +1614,7 @@ glimpse(lfcTable.summary)
 lfcTable.summary <- lfcTable.summary %>%
     gather(Variable, 
            Value, 
+           Percent.Difference,
            Absolute.Difference, 
            Alternative.Transcripts, 
            Repetitive.Elements,
@@ -1604,15 +1623,12 @@ lfcTable.summary <- lfcTable.summary %>%
     nest() %>%
 
     # Calculate p-values using two-tailed t-test and clean the data frame
-    mutate(ttest=map(data, ~ t.test(Percent.Difference ~ Discordance, 
+    mutate(ttest=map_dbl(data, ~ t.test(Value ~ Discordance, 
                                     data=.x)$p.value),
            data=map2(data, 
                      ttest,
                      ~ mutate(.x, P.Value=c(.y, rep("", nrow(.x)-1))))) %>%
-    dplyr::select(-ttest) %>%
     unnest(data) %>% 
-    spread(Variable, Value) %>% 
-    gather(Variable, Value, -Metric, -GENEID, -Discordance, -P.Value) %>%
     group_by(Metric) %>%
     nest()
 
@@ -1661,13 +1677,6 @@ for (i in 1:nrow(lfcTable.summary)) {
 
 }
 
-
-
-
-# Explore the output
-head(lfcTable.summary)
-dim(lfcTable.summary)
-glimpse(lfcTable.summary)
 
 
 
