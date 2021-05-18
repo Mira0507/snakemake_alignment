@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired1.yaml"    # Sets path to the config file
+configfile: "config/config_paired.yaml"    # Sets path to the config file
 #######################################################################################
 
 shell.prefix('set -euo pipefail; ')
@@ -13,8 +13,9 @@ rule all:
         expand("reference/{ref}", ref=config['REFERENCE'][1:]),  # Reference genome and annotation (GTF) files
         expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # HISAT2 output BAM files
         expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),  # STAR output BAM files
-        "star_output/featurecounts.tsv",
-        "hisat2_output/featurecounts.tsv"
+        "star_output/featurecounts.tsv",   # featureCount output (read count matrix) from STAR
+        "hisat2_output/featurecounts.tsv", # featureCount output (read count matrix) from STAR
+        "DE_analysis/DE.html"              # DE analysis result
 
 
 
@@ -203,3 +204,26 @@ rule featurecounts:
               "-a {input.gtf} "
               "-o {output.hisat2} "
               "{input.hisat2} &> {output.hisat2}.log")
+
+
+rule deseq2:
+    """
+    This rule performs differential expression (DE) analysis using DESeq2 in R
+    """
+    input:
+        star_reads="star_output/featurecounts.tsv",  # Assessed read counts from STAR aligner 
+        hisat2_reads="hisat2_output/featurecounts.tsv",  # Assessed read counts from HISAT2 aligner
+        rmd="DE_analysis/DE.Rmd",                    # R scripts for downstream DE analysis
+        rconfig=config["RCONFIG"]                    # config file for Rmd 
+    output:
+        "DE_analysis/DE.html",           # Output html file from Rmd 
+        "DE_analysis/lfc_STAR.csv",      # DESeq2 result from STAR-mediated alignment 
+        "DE_analysis/lfc_HISAT2.csv",    # DESeq2 result from HISAT2-mediated alignment
+        "DE_analysis/baseMean_difference.csv",        # Gene discordance table in baseMean
+        "DE_analysis/log2FoldChange_difference.csv",  # Gene discordance table in log2FoldChange
+        "DE_analysis/padj_difference.csv",            # Gene discordance table in padj
+        temp("DE_analysis/trf_input.fa") 
+    conda:
+        config['CONDA']                           # conda env config file
+    shell:
+        "Rscript -e \"rmarkdown::render('{input.rmd}')\""   # Requires "snakemake -j 8 --use-conda" command when running snakemake
