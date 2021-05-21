@@ -3,7 +3,7 @@ title: "STAR vs HISAT2 (Focused on Mean/Fold/FDR)"
 author: "Mira Sohn" 
 output:
     html_document:
-        self_contained: false
+        keep_md: yes
 ---
 
 ```{r global_options, include=FALSE}
@@ -48,7 +48,7 @@ library(jsonlite)
 
 ```{r}
 
-source("../config/config_single1.R")
+source("../config/config_paired1.R")
 
 ```
 
@@ -1348,8 +1348,7 @@ glimpse(lfcTable.discordance)
 #### - Tandem Repeats Finder (TRF): [Web](https://tandem.bu.edu/trf/trf.html), [Linux Version](https://tandem.bu.edu/trf/trf.unix.help.html), [Reference paper](https://pubmed.ncbi.nlm.nih.gov/9862982)
 
 
-#### - Genomic sequences were retrieved by using the Ensembl API [GET sequence/id/:id](https://rest.ensembl.org/documentation/info/sequence_id)
-
+#### - Genomic sequences were retrieved by using the Ensembl  REST API [GET sequence/id/:id](https://rest.ensembl.org/documentation/info/sequence_id), [GET archive/id/:id](https://rest.ensembl.org/documentation/info/archive_id_get)
 
 ```{r count_repetitive_elements}
 
@@ -1363,24 +1362,35 @@ server <- "https://rest.ensembl.org"
 
 for (i in 1:length(geneid)) {
 
+    # Test whether the gene id is currently in the database
+    ext.id <- paste0("/archive/id/", geneid[i], "?")
 
-    # Retrieve data using ensembl gene ids 
-    ext <- paste0("/sequence/id/",
-                  geneid[i],
-                  "?")
+    r.id <- GET(paste(server, ext.id, sep = ""), 
+                content_type("application/json"))
 
-    r <- GET(paste(server, ext, sep = ""), content_type("text/plain"))
-     
-    stop_for_status(r)
+    stop_for_status(r.id)
 
-    line1 <- paste0(">", geneid[i]) 
-    line2 <- content(r)
+    # If the gene id is currently in the database
+    if (content(r.id)$is_current == "1") {
 
-    write(line1, file="trf_input.fa", append=T)
-    write(line2, file="trf_input.fa", append=T)
+        # Retrieve data using ensembl gene ids 
+        ext.seq <- paste0("/sequence/id/",
+                      geneid[i],
+                      "?")
+
+        r.seq <- GET(paste(server, ext.seq, sep = ""), content_type("text/plain"))
+         
+        stop_for_status(r.seq)
+
+        line1 <- paste0(">", geneid[i]) 
+        line2 <- content(r.seq)
+
+        # Save the gene id and sequences as fasta format 
+        write(line1, file="trf_input.fa", append=T)
+        write(line2, file="trf_input.fa", append=T)
+    }
 
 }
-
 
 
 # Run tandem repeats finder (trf): only takes fasta format as an input file  
@@ -1522,42 +1532,55 @@ var.df <- data.frame()
 
 for (i in 1:length(geneid)) {
 
+    # Test whether the gene id is currently in the database
+    ext.id <- paste0("/archive/id/", geneid[i], "?")
 
-    # Retrieve data using ensembl gene ids 
-    ext <- paste0("/overlap/id/",
-                  geneid[i],
-                  "?feature=variation")
+    r.id <- GET(paste(server, ext.id, sep = ""), 
+                content_type("application/json"))
 
-    r <- GET(paste(server, ext, sep = ""), content_type("application/json"))
-     
-    stop_for_status(r)
+    stop_for_status(r.id)
 
-    # Extract the variant ids 
-    df <- data.frame(t(sapply(content(r),c))) %>% 
-        gather("Variable", "Value") 
+    # If the gene id is currently in the database
+    if (content(r.id)$is_current == "1") {
 
-    nvar <- 0
+        # Retrieve data using ensembl gene id 
+        ext <- paste0("/overlap/id/",
+                      geneid[i],
+                      "?feature=variation")
 
-    # If no variant is found:
-    if (ncol(df) != 0) {
+        r <- GET(paste(server, ext, sep = ""), content_type("application/json"))
+         
+        stop_for_status(r)
 
-        # Save variant ids filtered as a data frame
-        df <- df %>% 
-            dplyr::filter(str_detect(Value, "rs")) %>% 
-            mutate(Value=unlist(Value)) 
+        # Extract the variant ids 
+        df <- data.frame(t(sapply(content(r),c))) %>% 
+            gather("Variable", "Value") 
 
-        # Create a vector storing unique variant ids
-        nvar <- length(unique(df$Value))
+        nvar <- 0
+
+        # If no variant is found:
+        if (ncol(df) != 0) {
+
+            # Save variant ids filtered as a data frame
+            df <- df %>% 
+                dplyr::filter(str_detect(Value, "rs")) %>% 
+                mutate(Value=unlist(Value)) 
+
+            # Create a vector storing unique variant ids
+            nvar <- length(unique(df$Value))
 
 
-    } 
+        } 
 
-    # Create a data frame storing gene id and corresponding unique variant ids 
-    df.nvar <- data.frame(GENEID=geneid[i], 
-                          Variant.Alleles=nvar)
+        # Create a data frame storing gene id and corresponding unique variant ids 
+        df.nvar <- data.frame(GENEID=geneid[i], 
+                              Variant.Alleles=nvar)
 
-    # Combine the data frames
-    var.df <- rbind(var.df, df.nvar)
+        # Combine the data frames
+        var.df <- rbind(var.df, df.nvar)
+
+    }
+
 
 
 }
