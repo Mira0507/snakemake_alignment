@@ -3,13 +3,12 @@
 ###################### Sample info ######################
 
 SAMPLE:
-  DMSO_rep1: SRR13190144
-  DMSO_rep2: SRR13190145
-  DMSO_rep3: SRR13190146
-  SR0813_rep1: SRR13190150
-  SR0813_rep2: SRR13190151
-  SR0813_rep3: SRR13190152
-
+  Control_rep1: SRR6243319
+  Control_rep2: SRR6243320
+  Control_rep3: SRR6243321
+  KD_rep1: SRR6243322
+  KD_rep2: SRR6243323
+  KD_rep3: SRR6243324
 
 
 
@@ -21,7 +20,7 @@ END:
 
 
 
-###################### Reference info ########################
+###################### Reference info ######################
 
 REFERENCE:
   - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
@@ -33,6 +32,7 @@ REFERENCE:
 # Reference annotation (GTF) link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz 
 
 ###################### Extra-setting info ######################
+
 
 INDEX_STAR: "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
 
@@ -46,10 +46,7 @@ FASTQ_EXT: '.fastq.gz'
 
 CONDA: "config/conda_r.yaml"
   
-  
-  
-RCONFIG: 'config/config_single.R'
-
+RCONFIG: 'config/config_single1.R'
 
 
 

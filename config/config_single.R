@@ -24,4 +24,4 @@ padj.comparison.ylog <- F
 geneid.species <- "ENSG"  # Ensembl code for gene id given by species (e.g. ENSG (human), ENSMUSG (mouse))
 
 
-
+num.dis.genes <- 100
