@@ -1,10 +1,7 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired.yaml"    # Sets path to the config file
+configfile: "config/config_single1.yaml"    # Sets path to the config file
 #######################################################################################
-
-shell.prefix('set -euo pipefail; ')
-shell.executable('/bin/bash')
 
 
 
@@ -14,8 +11,8 @@ rule all:
         expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # HISAT2 output BAM files
         expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),  # STAR output BAM files
         "star_output/featurecounts.tsv",   # featureCount output (read count matrix) from STAR
-        "hisat2_output/featurecounts.tsv", # featureCount output (read count matrix) from STAR
-        "DE_analysis/DE.html"              # DE analysis result
+        "hisat2_output/featurecounts.tsv"  # featureCount output (read count matrix) from STAR
+#        "DE_analysis/DE.html"              # DE analysis result
 
 
 
@@ -45,8 +42,7 @@ rule get_reference:
         "reference/{ref}"  # Decompressed reference files
     run:
         link=params.reflink + wildcards.ref
-        shell("set +o pipefail; " 
-              "wget -c {link}.gz -O {output}.gz && " 
+        shell("wget -c {link}.gz -O {output}.gz && " 
               "gzip -d {output}.gz")
 
 
@@ -60,7 +56,6 @@ rule index_hisat2:
         expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])   # HISAT2 indexing files
     threads: 16
     shell:
-        "set +o pipefail; "
         "hisat2-build -f -o 4 "
         "-p {threads} "
         "--seed 67 "
@@ -82,7 +77,6 @@ rule index_star:
         "reference/star_index/SAindex"   # STAR indexing files
     threads: 16
     shell:
-        "set +o pipefail; "
         "STAR --runThreadN {threads} "
         "--runMode genomeGenerate "
         "--genomeDir reference/star_index "
@@ -191,8 +185,7 @@ rule featurecounts:
         # -g: attribute type. 'gene_id' by default. 
         # -L: set for long-read inputs 
         # -s: strand-specificity. 0 (unstranded & default), 1 (stranded), 2 (reversely stranded)
-        shell("set +o pipefail; "
-              "featureCounts {r} "    
+        shell("featureCounts {r} "    
               "-s0 "
               "-T {threads} "
               "-a {input.gtf} "
@@ -222,8 +215,9 @@ rule deseq2:
         "DE_analysis/baseMean_difference.csv",        # Gene discordance table in baseMean
         "DE_analysis/log2FoldChange_difference.csv",  # Gene discordance table in log2FoldChange
         "DE_analysis/padj_difference.csv",            # Gene discordance table in padj
-        temp("DE_analysis/trf_input.fa") 
+        temp("DE_analysis/trf_input.fa"),
+        temp("DE_analysis/DE.md")
     conda:
         config['CONDA']                           # conda env config file
     shell:
-        "Rscript -e \"rmarkdown::render('{input.rmd}')\""   # Requires "snakemake -j 8 --use-conda" command when running snakemake
+        "Rscript -e \"rmarkdown::render('{input.rmd}')\""   # Requires "snakemake -j 10 --use-conda" command when running snakemake
