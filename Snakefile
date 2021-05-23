@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_paired1.yaml"    # Sets path to the config file
+configfile: "config/config_single1.yaml"    # Sets path to the config file
 #######################################################################################
 
 
