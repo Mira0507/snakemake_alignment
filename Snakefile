@@ -8,10 +8,10 @@ configfile: "config/config_paired1.yaml"    # Sets path to the config file
 rule all: 
     input: 
         expand("reference/{ref}", ref=config['REFERENCE'][1:]),  # Reference genome and annotation (GTF) files
-        expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # Output BAM files
-        expand("star_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),
-        expand("{directory}/featurecounts.tsv", directory=config['OUTPUT_DIR'])  # featureCount output (read count matrix) 
-#        "DE_analysis/DE.html"              # DE analysis result
+        expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # Output BAM files (HISAT2)
+        expand("star_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),     # Output BAM files (STAR)
+        expand("{aligner}_output/featurecounts.tsv", aligner=config['ALIGNER']), # featureCount output (read count matrix) 
+        expand("DE_analysis/{outfile}", outfile=config['DE_OUTPUT'])             # DE analysis result
 
 
 
@@ -25,9 +25,8 @@ rule get_fastq:
         dic=config['SAMPLE']
     run:
         sra=params.dic[wildcards.sample]
-        shell("fastq-dump --split-files {sra} --gzip")   # -X is for testing
-        for i in range(len(output)):
-            i += 1
+        shell("fastq-dump --split-files {sra} --gzip")   # -X can be added for testing
+        for i in range(1, len(output)+1):
             shell("mv {sra}_{i}.fastq.gz fastq/{wildcards.sample}_{i}.fastq.gz")
 
 
@@ -52,7 +51,7 @@ rule index_hisat2:
     input: 
         expand("reference/{gen}", gen=config['REFERENCE'][1])    # Decompressed reference genome file
     output:
-        expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])   # HISAT2 indexing files
+        expand("{path}.{number}.ht2", path=config['INDEX_HISAT'], number=[x for x in range(1, 9)])   # HISAT2 indexing files
     threads: 16
     shell:
         "hisat2-build -f -o 4 "
@@ -71,9 +70,7 @@ rule index_star:
         fa=expand("reference/{gen}", gen=config['REFERENCE'][1]),  # Decompressed reference genome file
         gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
     output:
-        "reference/star_index/Genome",   # STAR indexing files
-        "reference/star_index/SA",       # STAR indexing files
-        "reference/star_index/SAindex"   # STAR indexing files
+        expand("reference/star_index/{index}", index=config['INDEX_STAR'][1:])
     threads: 16
     shell:
         "STAR --runThreadN {threads} "
@@ -89,7 +86,7 @@ rule align_hisat2:    # Creates bam files in hisat2_output directory"
     """
     input:
         fastq=expand("fastq/{{sample}}_{end}.fastq.gz", end=config["END"]),   # Gzipped FASTQ files
-        index=expand("reference/hisat2_index/hisat2_index.{number}.ht2", number=[x+1 for x in range(8)])  # HISAT2 indexing files
+        index=expand("{path}.{number}.ht2", path=config['INDEX_HISAT'], number=[x for x in range(1, 9)])  # HISAT2 indexing files
     output:
         temp("hisat2_output/{sample}.sam"),
         "hisat2_output/{sample}.bam"    # Bam files
@@ -123,13 +120,11 @@ rule align_star:   # Creates bam files in star_output directory"
     input:
         gtf=expand("reference/{anno}", anno=config['REFERENCE'][2]),   # Decompressed GTF file
         fastq=expand("fastq/{{sample}}_{end}.fastq.gz", end=config['END']),    # Gzipped FASTQ files
-        index1="reference/star_index/Genome",  # STAR indexing files
-        index2="reference/star_index/SA",
-        index3="reference/star_index/SAindex"
+        index=expand("reference/star_index/{index}", index=config['INDEX_STAR'][1:]) # STAR indexing files
     output:
         "star_output/{sample}.bam"     # Bam files
     params:
-        indexing=config["INDEX_STAR"],  # STAR indexing file directory
+        indexing=config["INDEX_STAR"][0],  # STAR indexing file directory
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
     threads: 16
     run:
@@ -167,12 +162,12 @@ rule featurecounts:
     This rule assesses read counts using featureCounts
     """
     input:
-        bam=expand("{{directory}}/{sample}.bam", sample=list(config['SAMPLE'].keys())),  # BAM files 
+        bam=expand("{{aligner}}_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),  # BAM files 
         gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
     params:
         ends=config['END']   # Read ends (e.g. [1] or [1, 2])
     output:
-        "{directory}/featurecounts.tsv"  # Read count tsv file 
+        "{aligner}_output/featurecounts.tsv"  # Read count tsv file 
     threads: 8
     run:
         r=""
@@ -196,20 +191,14 @@ rule deseq2:
     This rule performs differential expression (DE) analysis using DESeq2 in R
     """
     input:
-        star_reads="star_output/featurecounts.tsv",  # Assessed read counts from STAR aligner 
-        hisat2_reads="hisat2_output/featurecounts.tsv",  # Assessed read counts from HISAT2 aligner
+        reads=expand("{aligner}_output/featurecounts.tsv", aligner=config["ALIGNER"]),  # Assessed read counts 
         rmd="DE_analysis/DE.Rmd",                    # R scripts for downstream DE analysis
         rconfig=config["RCONFIG"]                    # config file for Rmd 
     output:
-        "DE_analysis/DE.html",           # Output html file from Rmd 
-        "DE_analysis/lfc_STAR.csv",      # DESeq2 result from STAR-mediated alignment 
-        "DE_analysis/lfc_HISAT2.csv",    # DESeq2 result from HISAT2-mediated alignment
-        "DE_analysis/baseMean_difference.csv",        # Gene discordance table in baseMean
-        "DE_analysis/log2FoldChange_difference.csv",  # Gene discordance table in log2FoldChange
-        "DE_analysis/padj_difference.csv",            # Gene discordance table in padj
+        expand("DE_analysis/{outfile}", outfile=config['DE_OUTPUT']),     # Output files from Rmd 
         temp("DE_analysis/trf_input.fa"),
         temp("DE_analysis/DE.md")
     conda:
-        config['CONDA']                           # conda env config file
+        config['CONDA']     # conda env config file
     shell:
         "Rscript -e \"rmarkdown::render('{input.rmd}')\""   # Requires "snakemake -j 10 --use-conda" command when running snakemake
