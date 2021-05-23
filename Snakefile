@@ -1,6 +1,6 @@
 
 #################################### Defined by users #################################
-configfile: "config/config_single1.yaml"    # Sets path to the config file
+configfile: "config/config_paired1.yaml"    # Sets path to the config file
 #######################################################################################
 
 
@@ -8,10 +8,9 @@ configfile: "config/config_single1.yaml"    # Sets path to the config file
 rule all: 
     input: 
         expand("reference/{ref}", ref=config['REFERENCE'][1:]),  # Reference genome and annotation (GTF) files
-        expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # HISAT2 output BAM files
-        expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),  # STAR output BAM files
-        "star_output/featurecounts.tsv",   # featureCount output (read count matrix) from STAR
-        "hisat2_output/featurecounts.tsv"  # featureCount output (read count matrix) from STAR
+        expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # Output BAM files
+        expand("star_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),
+        expand("{directory}/featurecounts.tsv", directory=config['OUTPUT_DIR'])  # featureCount output (read count matrix) 
 #        "DE_analysis/DE.html"              # DE analysis result
 
 
@@ -128,7 +127,7 @@ rule align_star:   # Creates bam files in star_output directory"
         index2="reference/star_index/SA",
         index3="reference/star_index/SAindex"
     output:
-        "star_output/{sample}Aligned.sortedByCoord.out.bam"     # Bam files
+        "star_output/{sample}.bam"     # Bam files
     params:
         indexing=config["INDEX_STAR"],  # STAR indexing file directory
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
@@ -159,7 +158,8 @@ rule align_star:   # Creates bam files in star_output directory"
                 "SortedByCoordinate "
                 "--quantMode GeneCounts "
                 "--twopassMode Basic "
-                "--chimOutType Junctions")   
+                "--chimOutType Junctions && "
+              "mv star_output/{wildcards.sample}Aligned.sortedByCoord.out.bam {output}")   
 
 
 rule featurecounts:
@@ -167,14 +167,12 @@ rule featurecounts:
     This rule assesses read counts using featureCounts
     """
     input:
-        star=expand("star_output/{sample}Aligned.sortedByCoord.out.bam", sample=list(config['SAMPLE'].keys())),   # Bam files from STAR
-        hisat2=expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),                               # Bam files from HISAT2
+        bam=expand("{{directory}}/{sample}.bam", sample=list(config['SAMPLE'].keys())),  # BAM files 
         gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
     params:
         ends=config['END']   # Read ends (e.g. [1] or [1, 2])
     output:
-        star="star_output/featurecounts.tsv",  # Read count tsv file (STAR version)
-        hisat2="hisat2_output/featurecounts.tsv"  # Read count tsv file (HISAT2 version)
+        "{directory}/featurecounts.tsv"  # Read count tsv file 
     threads: 8
     run:
         r=""
@@ -189,14 +187,8 @@ rule featurecounts:
               "-s0 "
               "-T {threads} "
               "-a {input.gtf} "
-              "-o {output.star} "
-              "{input.star} &> {output.star}.log && "
-              "featureCounts {r} "    
-              "-s0 "
-              "-T {threads} "
-              "-a {input.gtf} "
-              "-o {output.hisat2} "
-              "{input.hisat2} &> {output.hisat2}.log")
+              "-o {output} "
+              "{input.bam} &> {output}.log")
 
 
 rule deseq2:
