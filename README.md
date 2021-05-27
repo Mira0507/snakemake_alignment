@@ -20,9 +20,9 @@
 
 - [config/config_paired.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.R): R config file (paired-end testing)
 
-- [config/sample_single.txt](): sample table txt file, revised from SRA Run Selector metadata (single-end testing)
+- [config/sample_single.txt](): sample table txt file, modified from SRA Run Selector metadata (single-end testing)
 
-- [config/sample_paired.txt](): sample table txt file, revised from SRA Run Selector metadata (paired-end testing)
+- [config/sample_paired.txt](): sample table txt file, modified from SRA Run Selector metadata (paired-end testing)
 
 - [config/conda_r.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/conda_r.yaml): conda environment for the rule running R script
 
