@@ -5,7 +5,7 @@ import pandas as pd
 configfile: "config/config_paired1.yaml"    # Sets path to the config file
 #######################################################################################
 
-# Build a sample data frame (index=sample, Run=SRRxxxxxx)
+# Build a sample data frame (index=Treatment_rep1, Run=SRRxxxxxx)
 SAMPLE=pd.read_csv(config['SAMPLE_TABLE']).set_index('sample')['Run']
 
 
