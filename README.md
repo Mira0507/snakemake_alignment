@@ -2,7 +2,7 @@
 
 #### 1. Conda environment
 
-- [config/conda_env.yml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/conda_env.yml)
+- [config/conda_env.yaml]()
 
 #### 2. Snakemake 
 
@@ -20,9 +20,9 @@
 
 - [config/config_paired.R](https://github.com/Mira0507/snakemake_alignment/blob/master/config/config_paired.R): R config file (paired-end testing)
 
-- [config/sample_single.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_single.csv): sample table csv file (single-end testing)
+- [config/sample_single.txt](): sample table txt file, revised from SRA Run Selector metadata (single-end testing)
 
-- [config/sample_paired.csv](https://github.com/Mira0507/snakemake_alignment/blob/master/config/sample_paired.csv): sample table csv file (paired-end testing)
+- [config/sample_paired.txt](): sample table txt file, revised from SRA Run Selector metadata (paired-end testing)
 
 - [config/conda_r.yaml](https://github.com/Mira0507/snakemake_alignment/blob/master/config/conda_r.yaml): conda environment for the rule running R script
 
@@ -39,8 +39,8 @@
     - **Snakefile**: configfile: "path/to/config.yaml" (path to the your snakemake config file)
     - **config/config.yaml**: snakemake config file
     - **DE_analysis/DE.Rmd**: source("path/to/config.R") 
-    - **config/config.R**: species, sample.csv (file path), alpha (max FDR), mLog (minimum log2FoldChange of interest)
-    - **config/sample.csv**: the sample column has to correspond to the sample info in your snakemake config file
+    - **config/config.R**: species, sample.txt (file path), alpha (max FDR), mLog (minimum log2FoldChange of interest)
+    - **config/sample.txt**: the sample column has to correspond to the sample info in your snakemake config file
 
 - **Dry run**
 
