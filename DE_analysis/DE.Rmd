@@ -48,7 +48,7 @@ library(jsonlite)
 
 ```{r}
 
-source("../config/config_paired1.R")
+source("../config/config_single1.R")
 
 ```
 
