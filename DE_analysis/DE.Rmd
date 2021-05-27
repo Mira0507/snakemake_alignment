@@ -48,7 +48,7 @@ library(jsonlite)
 
 ```{r}
 
-source("../config/config_single1.R")
+source("../config/config_paired1.R")
 
 ```
 
@@ -147,7 +147,7 @@ dim(countList[[2]])
 ```{r generating_metadata}
 
 # Import your sample table 
-SampleTable <- read.csv(sample.csv)
+SampleTable <- read.csv(sample.table)
 
 
 # Define sample names 
