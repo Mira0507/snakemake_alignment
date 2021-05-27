@@ -1,16 +1,20 @@
+import pandas as pd
+
 
 #################################### Defined by users #################################
-configfile: "config/config_single1.yaml"    # Sets path to the config file
+configfile: "config/config_paired1.yaml"    # Sets path to the config file
 #######################################################################################
 
+# Build a sample data frame (index=sample, Run=SRRxxxxxx)
+SAMPLE=pd.read_csv(config['SAMPLE_TABLE']).set_index('sample')['Run']
 
 
 rule all: 
     input: 
-        expand("reference/{ref}", ref=config['REFERENCE'][1:]),  # Reference genome and annotation (GTF) files
-        expand("hisat2_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),   # Output BAM files (HISAT2)
-        expand("star_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),     # Output BAM files (STAR)
-        expand("{aligner}_output/featurecounts.tsv", aligner=config['ALIGNER']), # featureCount output (read count matrix) 
+        expand("reference/{ref}", ref=list(config['REFERENCE']['FILE'].values())),  # Reference genome and annotation (GTF) files
+        expand("hisat2_output/{sample}.bam", sample=SAMPLE.index.to_list()),   # Output BAM files (HISAT2)
+        expand("star_output/{sample}.bam", sample=SAMPLE.index.to_list()),     # Output BAM files (STAR)
+        expand("{aligner}_output/featurecounts.tsv", aligner=config['ALIGNER']),   # featureCount output (read count matrix) 
         expand("DE_analysis/{outfile}", outfile=config['DE_OUTPUT'])             # DE analysis result
 
 
@@ -22,10 +26,10 @@ rule get_fastq:
     output:
         expand("fastq/{{sample}}_{end}.fastq.gz", end=config['END'])
     params:
-        dic=config['SAMPLE']
+        df=SAMPLE
     run:
-        sra=params.dic[wildcards.sample]
-        shell("fastq-dump --split-files {sra} --gzip")   # -X can be added for testing
+        sra=params.df[wildcards.sample]
+        shell("fastq-dump --split-files {sra} --gzip -X 100000")   # -X can be added for testing
         for i in range(1, len(output)+1):
             shell("mv {sra}_{i}.fastq.gz fastq/{wildcards.sample}_{i}.fastq.gz")
 
@@ -35,7 +39,7 @@ rule get_reference:
     This rule downloads and decompresses reference files
     """
     params:
-        reflink=config['REFERENCE'][0]
+        reflink=config['REFERENCE']['LINK']
     output:
         "reference/{ref}"  # Decompressed reference files
     run:
@@ -49,7 +53,7 @@ rule index_hisat2:
     This rule constructs HISAT2 index files
     """
     input: 
-        expand("reference/{gen}", gen=config['REFERENCE'][1])    # Decompressed reference genome file
+        expand("reference/{gen}", gen=config['REFERENCE']['FILE']['GENOME'])    # Decompressed reference genome file
     output:
         expand("{path}.{number}.ht2", path=config['INDEX_HISAT'], number=[x for x in range(1, 9)])   # HISAT2 indexing files
     threads: 16
@@ -67,10 +71,10 @@ rule index_star:
     This rule constructs STAR index files
     """
     input:
-        fa=expand("reference/{gen}", gen=config['REFERENCE'][1]),  # Decompressed reference genome file
-        gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
+        fa=expand("reference/{gen}", gen=config['REFERENCE']['FILE']['GENOME']),  # Decompressed reference genome file
+        gtf=expand("reference/{anno}", anno=config['REFERENCE']['FILE']['ANNOTATION'])  # Decompressed GTF file
     output:
-        expand("reference/star_index/{index}", index=config['INDEX_STAR'][1:])
+        expand("reference/star_index/{index}", index=config['INDEX_STAR']['FILE'])
     threads: 16
     shell:
         "STAR --runThreadN {threads} "
@@ -118,13 +122,13 @@ rule align_star:   # Creates bam files in star_output directory"
     This rule aligns the reads using STAR two-pass mode
     """
     input:
-        gtf=expand("reference/{anno}", anno=config['REFERENCE'][2]),   # Decompressed GTF file
+        gtf=expand("reference/{anno}", anno=config['REFERENCE']['FILE']['ANNOTATION']),   # Decompressed GTF file
         fastq=expand("fastq/{{sample}}_{end}.fastq.gz", end=config['END']),    # Gzipped FASTQ files
-        index=expand("reference/star_index/{index}", index=config['INDEX_STAR'][1:]) # STAR indexing files
+        index=expand("reference/star_index/{index}", index=config['INDEX_STAR']['FILE']) # STAR indexing files
     output:
         "star_output/{sample}.bam"     # Bam files
     params:
-        indexing=config["INDEX_STAR"][0],  # STAR indexing file directory
+        indexing=config["INDEX_STAR"]['DIR'],  # STAR indexing file directory
         ext=config['FASTQ_EXT']         # extension of the FASTQ files (e.g. fastq.gz)
     threads: 16
     run:
@@ -162,8 +166,8 @@ rule featurecounts:
     This rule assesses read counts using featureCounts
     """
     input:
-        bam=expand("{{aligner}}_output/{sample}.bam", sample=list(config['SAMPLE'].keys())),  # BAM files 
-        gtf=expand("reference/{anno}", anno=config['REFERENCE'][2])  # Decompressed GTF file
+        bam=expand("{{aligner}}_output/{sample}.bam", sample=SAMPLE.index.to_list()),  # BAM files 
+        gtf=expand("reference/{anno}", anno=config['REFERENCE']['FILE']['ANNOTATION'])  # Decompressed GTF file
     params:
         ends=config['END']   # Read ends (e.g. [1] or [1, 2])
     output:
