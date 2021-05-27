@@ -7,7 +7,7 @@ featurecounts.path <- list(HISAT2="../hisat2_output/featurecounts.tsv",
 
 
 
-sample.csv <- "../config/sample_single1.csv"   # Path to the sample table csv file
+sample.table <- "../config/sample_single1.txt"   # Path to the sample table txt file
 
 alpha <- 0.1   # Set threshold FDR
 

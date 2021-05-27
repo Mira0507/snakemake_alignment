@@ -2,31 +2,20 @@
 
 ###################### Sample info ######################
 
-SAMPLE:
-  DMSO_rep1: SRR13190144
-  DMSO_rep2: SRR13190145
-  DMSO_rep3: SRR13190146
-  SR0813_rep1: SRR13190150
-  SR0813_rep2: SRR13190151
-  SR0813_rep3: SRR13190152
-
-
+SAMPLE_TABLE: "config/sample_single.txt"
 
 
 
 END: 
   - 1
 
-
-
-
-
-###################### Reference info ########################
+###################### Reference info ######################
 
 REFERENCE:
-  - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
-  - 'GRCh38.primary_assembly.genome.fa'
-  - 'gencode.v37.primary_assembly.annotation.gtf'
+  LINK: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
+  FILE: 
+    GENOME: 'GRCh38.primary_assembly.genome.fa'
+    ANNOTATION: 'gencode.v37.primary_assembly.annotation.gtf'
   
 # e.g. 
 # Reference genome link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/GRCh38.primary_assembly.genome.fa.gz
@@ -34,12 +23,13 @@ REFERENCE:
 
 ###################### Extra-setting info ######################
 
-INDEX_STAR: 
-  - "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
-  - "Genome"
-  - "SA"
-  - "SAindex"
 
+INDEX_STAR: 
+  DIR: "reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
+  FILE: 
+    - "Genome"
+    - "SA"
+    - "SAindex"
 
 
 INDEX_HISAT: "reference/hisat2_index/hisat2_index" # Assigns hisat2 index files (e.g.reference/hisat2_index/hisat2_index.1.ht2, reference/hisat2_index/hisat2_index.2.ht2, ...)
@@ -61,8 +51,6 @@ DE_OUTPUT:
   - 'DE.html'
   - 'lfc_STAR.csv'
   - 'lfc_HISAT2.csv'
-  
-  
   
 RCONFIG: 'config/config_single.R'
 
