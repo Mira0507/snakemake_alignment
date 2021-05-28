@@ -1,13 +1,8 @@
 
 ###################### Sample info ######################
 
-SAMPLE:
-  Treated_rep1: SRR6461133
-  Treated_rep2: SRR6461134
-  Treated_rep3: SRR6461135
-  Control_rep1: SRR6461139 
-  Control_rep2: SRR6461140
-  Control_rep3: SRR6461141
+SAMPLE_TABLE: "config/sample_paired1.txt"
+
 
 
 
@@ -20,10 +15,12 @@ END:
 ###################### Reference info ########################
 
 REFERENCE:
-  - 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
-  - 'GRCh38.primary_assembly.genome.fa'
-  - 'gencode.v37.primary_assembly.annotation.gtf'
-  
+  LINK: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/'
+  FILE: 
+    GENOME: 'GRCh38.primary_assembly.genome.fa'
+    ANNOTATION: 'gencode.v37.primary_assembly.annotation.gtf'
+    
+    
 # e.g. 
 # Reference genome link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/GRCh38.primary_assembly.genome.fa.gz
 # Reference annotation (GTF) link: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_37/gencode.v37.primary_assembly.annotation.gtf.gz 
@@ -31,10 +28,11 @@ REFERENCE:
 ###################### Extra-setting info ######################
 
 INDEX_STAR: 
-  - "/home/mira/Documents/programming/Bioinformatics/snakemake_star_hisat/reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
-  - "Genome"
-  - "SA"
-  - "SAindex"
+  DIR: "reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
+  FILE: 
+    - "Genome"
+    - "SA"
+    - "SAindex"
 
 
 
