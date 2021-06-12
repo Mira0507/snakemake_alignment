@@ -28,7 +28,7 @@ REFERENCE:
 
 
 INDEX_STAR: 
-  DIR: "reference/star_index" # Assigns path to star indexing directory (ABSOLUTE PATH NEEDED due to a potential STAR error!)
+  DIR: "reference/star_index" # Assigns path to star indexing directory (assign ABSOLUTE PATH if STAR generates an error)
   FILE: 
     - "Genome"
     - "SA"
